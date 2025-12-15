@@ -3,10 +3,16 @@ import { Image, Upload, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+
+export type BannerSize = 'small' | 'medium' | 'large' | 'fullWidth';
+export type PrizeImageSize = 'standard' | 'large' | 'extraLarge';
 
 export interface BrandingConfig {
   eventBannerUrl: string | null;
+  bannerSize: BannerSize;
+  prizeImageSize: PrizeImageSize;
 }
 
 interface BrandingPanelProps {
@@ -113,6 +119,55 @@ export function BrandingPanel({ branding, onBrandingChange }: BrandingPanelProps
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Banner Size Selector - only show when banner is uploaded */}
+        {branding.eventBannerUrl && (
+          <div className="space-y-2">
+            <Label>Banner Display Size</Label>
+            <Select
+              value={branding.bannerSize}
+              onValueChange={(value: BannerSize) => 
+                onBrandingChange({ ...branding, bannerSize: value })
+              }
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="small">Small</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="large">Large</SelectItem>
+                <SelectItem value="fullWidth">Full Width</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Controls banner size in presenter mode
+            </p>
+          </div>
+        )}
+
+        {/* Prize Image Size Selector */}
+        <div className="space-y-2">
+          <Label>Prize Image Size</Label>
+          <Select
+            value={branding.prizeImageSize}
+            onValueChange={(value: PrizeImageSize) => 
+              onBrandingChange({ ...branding, prizeImageSize: value })
+            }
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="standard">Standard</SelectItem>
+              <SelectItem value="large">Large</SelectItem>
+              <SelectItem value="extraLarge">Extra Large</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Controls prize image size in presenter mode
+          </p>
         </div>
       </CardContent>
     </Card>
