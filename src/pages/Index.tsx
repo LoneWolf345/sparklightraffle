@@ -18,6 +18,7 @@ import { Participant, Winner, RaffleConfig, ImportSummary, AuditLog } from '@/ty
 import { weightedRandomSelect, generateSeed, generateDrawId, createAuditLog, calculateChecksum } from '@/lib/raffle';
 import { useRafflePersistence } from '@/hooks/use-raffle-persistence';
 import { useAuth } from '@/hooks/use-auth';
+import { useCompanyBranding } from '@/hooks/use-company-branding';
 import { maskWinners, maskParticipants } from '@/lib/privacy';
 import { toast } from '@/hooks/use-toast';
 import { PrizeConfig, getDefaultPrizeConfig, getPrizeForWinner } from '@/types/prizes';
@@ -37,6 +38,7 @@ const defaultConfig: RaffleConfig = {
 export default function Index() {
   const navigate = useNavigate();
   const { user, isAdmin, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
+  const { logoUrl: companyLogoUrl } = useCompanyBranding();
   
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [winners, setWinners] = useState<Winner[]>([]);
@@ -60,11 +62,9 @@ export default function Index() {
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [showLockDialog, setShowLockDialog] = useState(false);
 
-  // Branding state
+  // Branding state (now just event banner per-draw)
   const [branding, setBranding] = useState<BrandingConfig>({
-    logoUrl: null,
     eventBannerUrl: null,
-    useEventBanner: false,
   });
 
   // Prizes state
@@ -376,6 +376,7 @@ export default function Index() {
         winners={winners}
         config={config}
         branding={branding}
+        companyLogoUrl={companyLogoUrl}
         prizes={prizes}
         currentWinner={currentWinner}
         isDrawing={isDrawing}
@@ -405,15 +406,30 @@ export default function Index() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary rounded-lg">
-                <Trophy className="h-8 w-8 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">Sparklight Virtual Raffle</h1>
-                <p className="text-sm text-muted-foreground">
-                  Weighted drawing for incentive programs
-                </p>
-              </div>
+              {companyLogoUrl ? (
+                <div className="flex flex-col items-start">
+                  <img
+                    src={companyLogoUrl}
+                    alt="Company logo"
+                    className="h-10 max-w-[180px] object-contain"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Weighted drawing for incentive programs
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="p-2 bg-primary rounded-lg">
+                    <Trophy className="h-8 w-8 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold">Sparklight Virtual Raffle</h1>
+                    <p className="text-sm text-muted-foreground">
+                      Weighted drawing for incentive programs
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
             
             <div className="flex items-center gap-4">

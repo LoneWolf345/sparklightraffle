@@ -47,9 +47,7 @@ export function useRafflePersistence() {
           .update({
             config: config as unknown as Json,
             is_locked: isLocked,
-            logo_url: branding.logoUrl,
             event_banner_url: branding.eventBannerUrl,
-            use_event_banner: branding.useEventBanner,
             prizes: prizes as unknown as Json,
           })
           .eq('id', drawUuid);
@@ -74,9 +72,7 @@ export function useRafflePersistence() {
             total_tickets: participants.reduce((sum, p) => sum + p.entries, 0),
             participants: participants as unknown as Json,
             is_locked: isLocked,
-            logo_url: branding.logoUrl,
             event_banner_url: branding.eventBannerUrl,
-            use_event_banner: branding.useEventBanner,
             prizes: prizes as unknown as Json,
           })
           .select('id')
@@ -205,9 +201,7 @@ export function useRafflePersistence() {
         datasetChecksum: draw.dataset_checksum,
         isLocked: draw.is_locked,
         branding: {
-          logoUrl: draw.logo_url || null,
           eventBannerUrl: draw.event_banner_url || null,
-          useEventBanner: draw.use_event_banner,
         },
         prizes: draw.prizes as unknown as PrizeConfig | null,
       };
