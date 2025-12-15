@@ -14,7 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      raffle_draws: {
+        Row: {
+          config: Json
+          created_at: string
+          dataset_checksum: string
+          draw_id: string
+          id: string
+          is_locked: boolean
+          participants: Json
+          seed: string
+          total_participants: number
+          total_tickets: number
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          dataset_checksum: string
+          draw_id: string
+          id?: string
+          is_locked?: boolean
+          participants: Json
+          seed: string
+          total_participants: number
+          total_tickets: number
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          dataset_checksum?: string
+          draw_id?: string
+          id?: string
+          is_locked?: boolean
+          participants?: Json
+          seed?: string
+          total_participants?: number
+          total_tickets?: number
+        }
+        Relationships: []
+      }
+      raffle_winners: {
+        Row: {
+          draw_number: number
+          drawn_at: string
+          email: string
+          entries: number
+          id: string
+          is_bonus_prize: boolean
+          name: string
+          raffle_draw_id: string
+        }
+        Insert: {
+          draw_number: number
+          drawn_at?: string
+          email: string
+          entries: number
+          id?: string
+          is_bonus_prize?: boolean
+          name: string
+          raffle_draw_id: string
+        }
+        Update: {
+          draw_number?: number
+          drawn_at?: string
+          email?: string
+          entries?: number
+          id?: string
+          is_bonus_prize?: boolean
+          name?: string
+          raffle_draw_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raffle_winners_raffle_draw_id_fkey"
+            columns: ["raffle_draw_id"]
+            isOneToOne: false
+            referencedRelation: "raffle_draws"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

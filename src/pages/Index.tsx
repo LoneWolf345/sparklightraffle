@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Trophy, Play, Users, Ticket, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,9 +9,11 @@ import { ConfigPanel } from '@/components/raffle/ConfigPanel';
 import { WinnersPanel } from '@/components/raffle/WinnersPanel';
 import { AuditPanel } from '@/components/raffle/AuditPanel';
 import { ParticipantsPanel } from '@/components/raffle/ParticipantsPanel';
+import { PriorDrawsPanel } from '@/components/raffle/PriorDrawsPanel';
 import { PresenterMode } from '@/components/raffle/PresenterMode';
 import { Participant, Winner, RaffleConfig, ImportSummary, AuditLog } from '@/types/raffle';
-import { weightedRandomSelect, generateSeed, generateDrawId, createAuditLog } from '@/lib/raffle';
+import { weightedRandomSelect, generateSeed, generateDrawId, createAuditLog, calculateChecksum } from '@/lib/raffle';
+import { useRafflePersistence } from '@/hooks/use-raffle-persistence';
 import { toast } from '@/hooks/use-toast';
 
 const defaultConfig: RaffleConfig = {
@@ -32,6 +34,7 @@ export default function Index() {
   const [auditLog, setAuditLog] = useState<AuditLog | null>(null);
   const [seed, setSeed] = useState<string>('');
   const [drawId, setDrawId] = useState<string>('');
+  const [datasetChecksum, setDatasetChecksum] = useState<string>('');
 
   // Presenter mode state
   const [showPresenter, setShowPresenter] = useState(false);
@@ -45,7 +48,55 @@ export default function Index() {
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [showLockDialog, setShowLockDialog] = useState(false);
 
+  // Persistence
+  const { saveDraw, loadDraw } = useRafflePersistence();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const totalTickets = participants.reduce((sum, p) => sum + p.entries, 0);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (!drawId || participants.length === 0) return;
+    
+    // Debounce saves
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDraw(drawId, participants, winners, config, seed, datasetChecksum, isLocked);
+    }, 1000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [drawId, participants, winners, config, seed, datasetChecksum, isLocked, saveDraw]);
+
+  const handleLoadDraw = useCallback(async (id: string) => {
+    const data = await loadDraw(id);
+    if (data) {
+      setParticipants(data.participants);
+      setWinners(data.winners);
+      setConfig(data.config);
+      setSeed(data.seed);
+      setDrawId(data.drawId);
+      setDatasetChecksum(data.datasetChecksum);
+      setIsLocked(data.isLocked);
+      setDrawNumber(data.winners.length);
+      setAuditLog(createAuditLog(
+        data.drawId, 
+        data.participants, 
+        data.winners, 
+        data.config, 
+        data.seed
+      ));
+      toast({
+        title: 'Draw Loaded',
+        description: `Loaded draw ${data.drawId} with ${data.winners.length} winners`,
+      });
+    }
+  }, [loadDraw]);
 
   const handleImport = useCallback((newParticipants: Participant[], summary: ImportSummary) => {
     setParticipants(newParticipants);
@@ -53,6 +104,8 @@ export default function Index() {
     setIsLocked(false);
     setAuditLog(null);
     setDrawNumber(0);
+    setDrawId(''); // Reset draw ID so a new one is created
+    setDatasetChecksum(calculateChecksum(newParticipants));
     toast({
       title: 'Participants Imported',
       description: `${summary.totalParticipants} participants with ${summary.totalTickets.toLocaleString()} total tickets`,
@@ -78,19 +131,21 @@ export default function Index() {
       return;
     }
 
-    // Initialize draw
-    const newSeed = generateSeed();
-    const newDrawId = generateDrawId();
-    setSeed(newSeed);
-    setDrawId(newDrawId);
+    // Initialize draw if not already started
+    if (!drawId) {
+      const newSeed = generateSeed();
+      const newDrawId = generateDrawId();
+      const checksum = calculateChecksum(participants);
+      setSeed(newSeed);
+      setDrawId(newDrawId);
+      setDatasetChecksum(checksum);
+      setAuditLog(createAuditLog(newDrawId, participants, [], config, newSeed));
+    }
+    
     setShowPresenter(true);
-    setDrawNumber(0);
     setCurrentWinner(null);
     setIsReplayMode(false);
-
-    // Initialize audit log
-    setAuditLog(createAuditLog(newDrawId, participants, [], config, newSeed));
-  }, [participants, config]);
+  }, [participants, config, drawId]);
 
   const startReplayMode = useCallback(() => {
     if (winners.length === 0) {
@@ -293,7 +348,7 @@ export default function Index() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="setup" className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="setup">Setup</TabsTrigger>
             <TabsTrigger value="participants">
               Participants {participants.length > 0 && `(${participants.length})`}
@@ -302,6 +357,7 @@ export default function Index() {
               Winners {winners.length > 0 && `(${winners.length})`}
             </TabsTrigger>
             <TabsTrigger value="audit">Audit</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="setup" className="space-y-6">
@@ -362,6 +418,10 @@ export default function Index() {
 
           <TabsContent value="audit">
             <AuditPanel auditLog={auditLog} />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <PriorDrawsPanel onLoadDraw={handleLoadDraw} />
           </TabsContent>
         </Tabs>
       </main>
