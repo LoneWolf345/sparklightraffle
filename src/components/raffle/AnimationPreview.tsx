@@ -8,6 +8,7 @@ import { WheelAnimation } from './WheelAnimation';
 interface AnimationPreviewProps {
   animationStyle: 'slot' | 'wheel';
   config?: Pick<RaffleConfig, 'animationDuration' | 'animationSpeed'>;
+  participants?: Participant[];
 }
 
 // Sample participants for preview
@@ -26,16 +27,22 @@ const SAMPLE_PARTICIPANTS: Participant[] = [
   { id: 'p12', name: 'Skyler White', email: 'skyler.w@example.com', entries: 4 },
 ];
 
-export function AnimationPreview({ animationStyle, config }: AnimationPreviewProps) {
+export function AnimationPreview({ animationStyle, config, participants }: AnimationPreviewProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [previewWinner, setPreviewWinner] = useState<Participant | null>(null);
 
+  // Use imported participants if available and sufficient, otherwise sample data
+  const displayParticipants = participants && participants.length >= 5 
+    ? participants 
+    : SAMPLE_PARTICIPANTS;
+  const usingImportedData = participants && participants.length >= 5;
+
   const handlePreview = useCallback(() => {
-    // Pick a random winner from sample participants
-    const randomWinner = SAMPLE_PARTICIPANTS[Math.floor(Math.random() * SAMPLE_PARTICIPANTS.length)];
+    // Pick a random winner from display participants
+    const randomWinner = displayParticipants[Math.floor(Math.random() * displayParticipants.length)];
     setPreviewWinner(randomWinner);
     setIsSpinning(true);
-  }, []);
+  }, [displayParticipants]);
 
   const handleSpinComplete = useCallback(() => {
     setIsSpinning(false);
@@ -49,7 +56,18 @@ export function AnimationPreview({ animationStyle, config }: AnimationPreviewPro
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">Animation Preview</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium">Animation Preview</p>
+          {usingImportedData ? (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              Using imported data
+            </span>
+          ) : (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+              Sample data
+            </span>
+          )}
+        </div>
         <div className="flex gap-2">
           {previewWinner && !isSpinning && (
             <Button variant="outline" size="sm" onClick={handleReset}>
@@ -75,7 +93,7 @@ export function AnimationPreview({ animationStyle, config }: AnimationPreviewPro
         ) : animationStyle === 'slot' ? (
           <div className="w-full">
             <SlotAnimation
-              participants={SAMPLE_PARTICIPANTS}
+              participants={displayParticipants}
               winner={previewWinner}
               isSpinning={isSpinning}
               onSpinComplete={handleSpinComplete}
@@ -84,7 +102,7 @@ export function AnimationPreview({ animationStyle, config }: AnimationPreviewPro
           </div>
         ) : (
           <WheelAnimation
-            participants={SAMPLE_PARTICIPANTS}
+            participants={displayParticipants}
             winner={previewWinner}
             isSpinning={isSpinning}
             onSpinComplete={handleSpinComplete}
