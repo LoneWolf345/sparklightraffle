@@ -188,6 +188,7 @@ export function SetupWizard({
             config={config}
             onConfigChange={onConfigChange}
             maxWinners={config.allowRepeats ? 999 : participants.length}
+            participants={participants}
           />
         )}
 

@@ -5,16 +5,17 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { RaffleConfig } from '@/types/raffle';
+import { RaffleConfig, Participant } from '@/types/raffle';
 import { AnimationPreview } from './AnimationPreview';
 
 interface ConfigPanelProps {
   config: RaffleConfig;
   onConfigChange: (config: RaffleConfig) => void;
   maxWinners: number;
+  participants?: Participant[];
 }
 
-export function ConfigPanel({ config, onConfigChange, maxWinners }: ConfigPanelProps) {
+export function ConfigPanel({ config, onConfigChange, maxWinners, participants }: ConfigPanelProps) {
   const updateConfig = (updates: Partial<RaffleConfig>) => {
     onConfigChange({ ...config, ...updates });
   };
@@ -138,7 +139,7 @@ export function ConfigPanel({ config, onConfigChange, maxWinners }: ConfigPanelP
         </div>
 
         {/* Animation Preview */}
-        <AnimationPreview animationStyle={config.animationStyle} config={config} />
+        <AnimationPreview animationStyle={config.animationStyle} config={config} participants={participants} />
 
         {/* Reveal Mode */}
         <div className="space-y-2">
