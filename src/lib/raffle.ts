@@ -1,5 +1,6 @@
 import CryptoJS from 'crypto-js';
 import { Participant, Winner, RaffleConfig, AuditLog } from '@/types/raffle';
+import { PrizeConfig, getPrizeForWinner } from '@/types/prizes';
 
 // Seeded random number generator (Mulberry32)
 function mulberry32(seed: number) {
@@ -79,15 +80,31 @@ export function createAuditLog(
   };
 }
 
-export function exportWinnersCSV(winners: Winner[]): string {
-  const headers = ['Draw #', 'Name', 'Email', 'Entries', 'Bonus Prize'];
-  const rows = winners.map(w => [
-    w.drawNumber.toString(),
-    `"${w.participant.name}"`,
-    w.participant.email,
-    w.participant.entries.toString(),
-    w.isBonusPrize ? 'Yes' : 'No',
-  ]);
+export function exportWinnersCSV(winners: Winner[], prizes?: PrizeConfig | null): string {
+  const hasPrizes = prizes !== null && prizes !== undefined;
+  const headers = hasPrizes 
+    ? ['Draw #', 'Name', 'Email', 'Entries', 'Bonus Prize', 'Prize']
+    : ['Draw #', 'Name', 'Email', 'Entries', 'Bonus Prize'];
+  
+  const rows = winners.map((w, index) => {
+    const prize = hasPrizes ? getPrizeForWinner(prizes, index) : null;
+    const prizeText = prize?.text || '';
+    
+    const baseRow = [
+      w.drawNumber.toString(),
+      `"${w.participant.name}"`,
+      w.participant.email,
+      w.participant.entries.toString(),
+      w.isBonusPrize ? 'Yes' : 'No',
+    ];
+    
+    if (hasPrizes) {
+      baseRow.push(`"${prizeText}"`);
+    }
+    
+    return baseRow;
+  });
+  
   return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
 }
 
