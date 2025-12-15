@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Winner } from '@/types/raffle';
+import { PrizeConfig, getPrizeForWinner } from '@/types/prizes';
+import { PrizeDisplay } from './PrizeDisplay';
 import { exportWinnersCSV, downloadFile } from '@/lib/raffle';
 import { toast } from '@/hooks/use-toast';
 
@@ -14,6 +16,7 @@ interface WinnersPanelProps {
   onRestart: () => void;
   onLock: () => void;
   readOnly?: boolean;
+  prizes?: PrizeConfig | null;
 }
 
 export function WinnersPanel({ 
@@ -22,7 +25,8 @@ export function WinnersPanel({
   onUndo, 
   onRestart, 
   onLock,
-  readOnly = false
+  readOnly = false,
+  prizes = null
 }: WinnersPanelProps) {
   const handleCopyWinners = () => {
     const text = winners
@@ -99,40 +103,53 @@ export function WinnersPanel({
                 <TableHead className="w-16">#</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                {prizes && <TableHead>Prize</TableHead>}
                 {!readOnly && <TableHead className="w-20 text-right">Entries</TableHead>}
                 <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {winners.map((winner) => (
-                <TableRow key={`${winner.participant.id}-${winner.drawNumber}`}>
-                  <TableCell className="font-medium">
-                    {winner.drawNumber}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {winner.participant.name}
-                    {winner.isBonusPrize && (
-                      <Badge variant="default" className="ml-2 bg-accent text-accent-foreground">
-                        <Gift className="h-3 w-3 mr-1" />
-                        Bonus
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {winner.participant.email}
-                  </TableCell>
-                  {!readOnly && (
-                    <TableCell className="text-right">
-                      {winner.participant.entries}
+              {winners.map((winner, index) => {
+                const prize = getPrizeForWinner(prizes, index);
+                return (
+                  <TableRow key={`${winner.participant.id}-${winner.drawNumber}`}>
+                    <TableCell className="font-medium">
+                      {winner.drawNumber}
                     </TableCell>
-                  )}
-                  <TableCell className="text-right">
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(winner.timestamp).toLocaleTimeString()}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    <TableCell className="font-medium">
+                      {winner.participant.name}
+                      {winner.isBonusPrize && (
+                        <Badge variant="default" className="ml-2 bg-accent text-accent-foreground">
+                          <Gift className="h-3 w-3 mr-1" />
+                          Bonus
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {winner.participant.email}
+                    </TableCell>
+                    {prizes && (
+                      <TableCell>
+                        {prize ? (
+                          <PrizeDisplay prize={prize} size="sm" />
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </TableCell>
+                    )}
+                    {!readOnly && (
+                      <TableCell className="text-right">
+                        {winner.participant.entries}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(winner.timestamp).toLocaleTimeString()}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
