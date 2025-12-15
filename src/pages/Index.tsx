@@ -25,11 +25,11 @@ import { PrizesPanel } from '@/components/raffle/PrizesPanel';
 import { PrizeDisplay } from '@/components/raffle/PrizeDisplay';
 
 const defaultConfig: RaffleConfig = {
-  numberOfWinners: 40,
+  numberOfWinners: 5,
   allowRepeats: false,
   animationStyle: 'slot',
   revealMode: 'sequential',
-  bonusRoundInterval: 10,
+  bonusRoundInterval: 0,
   showEmail: true,
   soundEnabled: true,
 };
