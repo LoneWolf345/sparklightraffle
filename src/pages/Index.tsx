@@ -13,6 +13,7 @@ import { ParticipantsPanel } from '@/components/raffle/ParticipantsPanel';
 import { PriorDrawsPanel } from '@/components/raffle/PriorDrawsPanel';
 import { PresenterMode } from '@/components/raffle/PresenterMode';
 import { BrandingPanel, BrandingConfig } from '@/components/raffle/BrandingPanel';
+import { AdminPanel } from '@/components/raffle/AdminPanel';
 import { Participant, Winner, RaffleConfig, ImportSummary, AuditLog } from '@/types/raffle';
 import { weightedRandomSelect, generateSeed, generateDrawId, createAuditLog, calculateChecksum } from '@/lib/raffle';
 import { useRafflePersistence } from '@/hooks/use-raffle-persistence';
@@ -418,7 +419,7 @@ export default function Index() {
         {/* Admin view with all tabs */}
         {isAdmin ? (
           <Tabs defaultValue="setup" className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl grid-cols-5">
+            <TabsList className="grid w-full max-w-3xl grid-cols-6">
               <TabsTrigger value="setup">Setup</TabsTrigger>
               <TabsTrigger value="participants">
                 Participants {participants.length > 0 && `(${participants.length})`}
@@ -428,6 +429,10 @@ export default function Index() {
               </TabsTrigger>
               <TabsTrigger value="audit">Audit</TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
+              <TabsTrigger value="admin">
+                <Shield className="h-4 w-4 mr-1" />
+                Admin
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="setup" className="space-y-6">
@@ -498,6 +503,10 @@ export default function Index() {
 
             <TabsContent value="history">
               <PriorDrawsPanel onLoadDraw={handleLoadDraw} />
+            </TabsContent>
+
+            <TabsContent value="admin">
+              <AdminPanel />
             </TabsContent>
           </Tabs>
         ) : (
