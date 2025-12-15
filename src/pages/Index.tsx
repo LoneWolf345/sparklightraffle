@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Play, Users, Ticket, AlertTriangle, RotateCcw, LogIn, LogOut, Shield } from 'lucide-react';
+import { Trophy, Play, Users, Ticket, AlertTriangle, LogIn, LogOut, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { WinnersPanel } from '@/components/raffle/WinnersPanel';
+import { WinnersReview } from '@/components/raffle/WinnersReview';
 import { AuditPanel } from '@/components/raffle/AuditPanel';
 import { PriorDrawsPanel } from '@/components/raffle/PriorDrawsPanel';
 import { PresenterMode } from '@/components/raffle/PresenterMode';
@@ -526,21 +526,19 @@ export default function Index() {
             </TabsContent>
 
             <TabsContent value="winners" className="space-y-4">
-              {winners.length > 0 && (
-                <div className="flex justify-end">
-                  <Button variant="outline" onClick={startReplayMode}>
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Replay Presentation
-                  </Button>
-                </div>
-              )}
-              <WinnersPanel
+              <WinnersReview
                 winners={winners}
+                participants={participants}
+                prizes={prizes}
                 isLocked={isLocked}
                 onUndo={handleUndo}
                 onRestart={() => setShowRestartDialog(true)}
                 onLock={() => setShowLockDialog(true)}
-                prizes={prizes}
+                onReplay={startReplayMode}
+                onViewAudit={() => {
+                  const tabsList = document.querySelector('[value="audit"]');
+                  if (tabsList instanceof HTMLElement) tabsList.click();
+                }}
               />
             </TabsContent>
 
@@ -567,25 +565,19 @@ export default function Index() {
             </TabsList>
 
             <TabsContent value="winners" className="space-y-4">
-              {displayWinners.length > 0 && isAuthenticated && (
-                <div className="flex justify-end">
-                  <Button variant="outline" onClick={startReplayMode}>
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Replay Presentation
-                  </Button>
-                </div>
-              )}
-              {displayWinners.length > 0 ? (
-                <WinnersPanel
-                  winners={displayWinners}
-                  isLocked={true}
-                  onUndo={() => {}}
-                  onRestart={() => {}}
-                  onLock={() => {}}
-                  readOnly
-                  prizes={prizes}
-                />
-              ) : (
+              <WinnersReview
+                winners={displayWinners}
+                participants={displayParticipants}
+                prizes={prizes}
+                isLocked={true}
+                onUndo={() => {}}
+                onRestart={() => {}}
+                onLock={() => {}}
+                onReplay={isAuthenticated ? startReplayMode : () => {}}
+                onViewAudit={() => {}}
+                readOnly
+              />
+              {!isAuthenticated && displayWinners.length === 0 && (
                 <Card>
                   <CardContent className="py-12 text-center">
                     <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -593,11 +585,9 @@ export default function Index() {
                     <p className="text-sm text-muted-foreground">
                       Check back when the raffle has been drawn
                     </p>
-                    {!isAuthenticated && (
-                      <p className="text-xs text-muted-foreground mt-4">
-                        Sign in with your work email to see full winner details
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground mt-4">
+                      Sign in with your work email to see full winner details
+                    </p>
                   </CardContent>
                 </Card>
               )}
