@@ -17,6 +17,7 @@ interface PresenterModeProps {
   winners: Winner[];
   config: RaffleConfig;
   branding: BrandingConfig;
+  companyLogoUrl: string | null;
   prizes: PrizeConfig | null;
   currentWinner: Participant | null;
   isDrawing: boolean;
@@ -34,6 +35,7 @@ export function PresenterMode({
   winners,
   config,
   branding,
+  companyLogoUrl,
   prizes,
   currentWinner,
   isDrawing,
@@ -168,40 +170,65 @@ export function PresenterMode({
     }
   }, [isComplete, winners.length, playComplete, config.revealMode]);
 
+  // Render header based on branding configuration
+  const renderHeader = () => {
+    // If event banner is provided, show only the banner (no text)
+    if (branding.eventBannerUrl) {
+      return (
+        <img
+          src={branding.eventBannerUrl}
+          alt="Event banner"
+          className="h-16 max-w-[400px] object-contain"
+        />
+      );
+    }
+
+    // If company logo is set (global), show logo + subtitle
+    if (companyLogoUrl) {
+      return (
+        <div className="flex flex-col items-start">
+          <img
+            src={companyLogoUrl}
+            alt="Company logo"
+            className="h-12 max-w-[200px] object-contain"
+          />
+          <p className="text-sm text-muted-foreground mt-1">
+            Weighted drawing for incentive programs
+          </p>
+        </div>
+      );
+    }
+
+    // Default: icon + title + subtitle
+    return (
+      <>
+        <Trophy className="h-8 w-8 text-primary" />
+        <div>
+          <h1 className="text-2xl font-bold">Sparklight Virtual Raffle</h1>
+          <p className="text-sm text-muted-foreground">
+            Weighted drawing for incentive programs
+          </p>
+        </div>
+      </>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-4">
-          {branding.useEventBanner && branding.eventBannerUrl ? (
-            <img
-              src={branding.eventBannerUrl}
-              alt="Event banner"
-              className="h-12 max-w-[300px] object-contain"
-            />
-          ) : branding.logoUrl ? (
-            <img
-              src={branding.logoUrl}
-              alt="Company logo"
-              className="h-12 max-w-[200px] object-contain"
-            />
-          ) : (
-            <Trophy className="h-8 w-8 text-primary" />
-          )}
-          <div>
-            <h1 className="text-2xl font-bold">Sparklight Virtual Raffle</h1>
-            <p className="text-sm text-muted-foreground">
-              {config.revealMode === 'bulk' 
-                ? `Drawing ${config.numberOfWinners} winners`
-                : `Drawing ${drawNumber} of ${config.numberOfWinners}`}
-            </p>
-          </div>
+          {renderHeader()}
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <div className="text-sm text-muted-foreground">Winners Drawn</div>
+            <div className="text-sm text-muted-foreground">
+              {config.revealMode === 'bulk' 
+                ? `Drawing ${config.numberOfWinners} winners`
+                : `Drawing ${drawNumber} of ${config.numberOfWinners}`}
+            </div>
             <div className="text-2xl font-bold">
-              {config.revealMode === 'bulk' ? (bulkWinners?.length || 0) : winners.length}
+              {config.revealMode === 'bulk' ? (bulkWinners?.length || 0) : winners.length} Winners
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={onExit}>
