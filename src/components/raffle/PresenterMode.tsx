@@ -3,8 +3,10 @@ import { X, ChevronRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SlotAnimation } from './SlotAnimation';
 import { WheelAnimation } from './WheelAnimation';
+import { PrizeDisplay } from './PrizeDisplay';
 import { Participant, Winner, RaffleConfig } from '@/types/raffle';
 import { BrandingConfig } from './BrandingPanel';
+import { PrizeConfig, getPrizeForWinner } from '@/types/prizes';
 import { useSoundEffects } from '@/hooks/use-sound-effects';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import confetti from 'canvas-confetti';
@@ -14,6 +16,7 @@ interface PresenterModeProps {
   winners: Winner[];
   config: RaffleConfig;
   branding: BrandingConfig;
+  prizes: PrizeConfig | null;
   currentWinner: Participant | null;
   isDrawing: boolean;
   drawNumber: number;
@@ -28,6 +31,7 @@ export function PresenterMode({
   winners,
   config,
   branding,
+  prizes,
   currentWinner,
   isDrawing,
   drawNumber,
@@ -43,6 +47,9 @@ export function PresenterMode({
   const isBonusPrize = config.bonusRoundInterval > 0 && 
     drawNumber > 0 && 
     drawNumber % config.bonusRoundInterval === 0;
+
+  // Get the prize for the current winner position
+  const currentPrize = getPrizeForWinner(prizes, drawNumber - 1);
 
   const triggerConfetti = useCallback(() => {
     // Skip confetti if user prefers reduced motion
@@ -215,9 +222,18 @@ export function PresenterMode({
         )}
 
         {/* Winner Info */}
-        {showingResult && currentWinner && config.showEmail && (
-          <div className="mt-4 text-xl text-muted-foreground animate-fade-in">
-            {currentWinner.email}
+        {showingResult && currentWinner && (
+          <div className="mt-4 text-center animate-fade-in space-y-4">
+            {config.showEmail && (
+              <div className="text-xl text-muted-foreground">
+                {currentWinner.email}
+              </div>
+            )}
+            {currentPrize && (
+              <div className="bg-accent/20 rounded-xl py-4 px-8 inline-block">
+                <PrizeDisplay prize={currentPrize} size="lg" />
+              </div>
+            )}
           </div>
         )}
       </div>

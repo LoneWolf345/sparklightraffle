@@ -4,6 +4,7 @@ import { Participant, Winner, RaffleConfig } from '@/types/raffle';
 import { toast } from '@/hooks/use-toast';
 import { Json } from '@/integrations/supabase/types';
 import { BrandingConfig } from '@/components/raffle/BrandingPanel';
+import { PrizeConfig } from '@/types/prizes';
 
 export interface SavedDraw {
   id: string;
@@ -25,7 +26,8 @@ export function useRafflePersistence() {
     seed: string,
     datasetChecksum: string,
     isLocked: boolean,
-    branding: BrandingConfig
+    branding: BrandingConfig,
+    prizes: PrizeConfig | null
   ): Promise<string | null> => {
     try {
       // First, check if draw already exists
@@ -48,6 +50,7 @@ export function useRafflePersistence() {
             logo_url: branding.logoUrl,
             event_banner_url: branding.eventBannerUrl,
             use_event_banner: branding.useEventBanner,
+            prizes: prizes as unknown as Json,
           })
           .eq('id', drawUuid);
 
@@ -74,6 +77,7 @@ export function useRafflePersistence() {
             logo_url: branding.logoUrl,
             event_banner_url: branding.eventBannerUrl,
             use_event_banner: branding.useEventBanner,
+            prizes: prizes as unknown as Json,
           })
           .select('id')
           .single();
@@ -156,6 +160,7 @@ export function useRafflePersistence() {
     datasetChecksum: string;
     isLocked: boolean;
     branding: BrandingConfig;
+    prizes: PrizeConfig | null;
   } | null> => {
     try {
       const { data: draw, error: drawError } = await supabase
@@ -204,6 +209,7 @@ export function useRafflePersistence() {
           eventBannerUrl: draw.event_banner_url || null,
           useEventBanner: draw.use_event_banner,
         },
+        prizes: draw.prizes as unknown as PrizeConfig | null,
       };
     } catch (error) {
       console.error('Error loading draw:', error);

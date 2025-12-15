@@ -20,6 +20,9 @@ import { useRafflePersistence } from '@/hooks/use-raffle-persistence';
 import { useAuth } from '@/hooks/use-auth';
 import { maskWinners, maskParticipants } from '@/lib/privacy';
 import { toast } from '@/hooks/use-toast';
+import { PrizeConfig, getDefaultPrizeConfig, getPrizeForWinner } from '@/types/prizes';
+import { PrizesPanel } from '@/components/raffle/PrizesPanel';
+import { PrizeDisplay } from '@/components/raffle/PrizeDisplay';
 
 const defaultConfig: RaffleConfig = {
   numberOfWinners: 40,
@@ -63,6 +66,9 @@ export default function Index() {
     useEventBanner: false,
   });
 
+  // Prizes state
+  const [prizes, setPrizes] = useState<PrizeConfig | null>(getDefaultPrizeConfig());
+
   // Persistence
   const { saveDraw, loadDraw } = useRafflePersistence();
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -89,7 +95,7 @@ export default function Index() {
       clearTimeout(saveTimeoutRef.current);
     }
     saveTimeoutRef.current = setTimeout(() => {
-      saveDraw(drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding);
+      saveDraw(drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding, prizes);
     }, 1000);
 
     return () => {
@@ -97,7 +103,7 @@ export default function Index() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [isAdmin, drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding, saveDraw]);
+  }, [isAdmin, drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding, prizes, saveDraw]);
 
   const handleLoadDraw = useCallback(async (id: string) => {
     const data = await loadDraw(id);
@@ -110,6 +116,7 @@ export default function Index() {
       setDatasetChecksum(data.datasetChecksum);
       setIsLocked(data.isLocked);
       setBranding(data.branding);
+      setPrizes(data.prizes);
       setDrawNumber(data.winners.length);
       setAuditLog(createAuditLog(
         data.drawId, 
@@ -322,6 +329,7 @@ export default function Index() {
         winners={winners}
         config={config}
         branding={branding}
+        prizes={prizes}
         currentWinner={currentWinner}
         isDrawing={isDrawing}
         drawNumber={drawNumber}
@@ -450,6 +458,11 @@ export default function Index() {
                   <BrandingPanel
                     branding={branding}
                     onBrandingChange={setBranding}
+                  />
+                  <PrizesPanel
+                    prizes={prizes}
+                    onPrizesChange={setPrizes}
+                    numberOfWinners={config.numberOfWinners}
                   />
                 </div>
               </div>
