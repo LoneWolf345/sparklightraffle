@@ -53,6 +53,10 @@ export default function Index() {
   const [replayIndex, setReplayIndex] = useState(0);
   const [isReplayMode, setIsReplayMode] = useState(false);
   const [bulkWinners, setBulkWinners] = useState<Winner[]>([]);
+  const isReplayModeRef = useRef(false);
+
+  // Tab state for controlled tabs
+  const [activeTab, setActiveTab] = useState('setup');
 
   // Dialog state
   const [showRestartDialog, setShowRestartDialog] = useState(false);
@@ -190,10 +194,12 @@ export default function Index() {
       });
       return;
     }
+    isReplayModeRef.current = true;
     setIsReplayMode(true);
     setReplayIndex(0);
     setDrawNumber(0);
     setCurrentWinner(null);
+    setIsDrawing(false);
     setShowPresenter(true);
   }, [winners]);
 
@@ -201,8 +207,8 @@ export default function Index() {
     // Clear previous winner before starting new draw
     setCurrentWinner(null);
     
-    // Replay mode logic
-    if (isReplayMode) {
+    // Replay mode logic - use ref to avoid stale closure
+    if (isReplayModeRef.current) {
       if (replayIndex >= winners.length) return;
       setIsDrawing(true);
       setCurrentWinner(winners[replayIndex].participant);
@@ -318,6 +324,7 @@ export default function Index() {
   const exitPresenterMode = useCallback(() => {
     setShowPresenter(false);
     setIsReplayMode(false);
+    isReplayModeRef.current = false;
     setIsDrawing(false);
     setCurrentWinner(null);
     // Transfer bulk winners to main winners if applicable
@@ -492,7 +499,7 @@ export default function Index() {
       <main className="container mx-auto px-4 py-8">
         {/* Admin view with all tabs */}
         {isAdmin ? (
-          <Tabs defaultValue="setup" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full max-w-2xl grid-cols-5">
               <TabsTrigger value="setup">Setup</TabsTrigger>
               <TabsTrigger value="winners">
@@ -521,10 +528,7 @@ export default function Index() {
                 onPrizesChange={setPrizes}
                 onStartRaffle={startPresenterMode}
                 onReplayPresentation={startReplayMode}
-                onSwitchToWinners={() => {
-                  const tabsList = document.querySelector('[value="winners"]');
-                  if (tabsList instanceof HTMLElement) tabsList.click();
-                }}
+                onSwitchToWinners={() => setActiveTab('winners')}
               />
             </TabsContent>
 
@@ -538,10 +542,7 @@ export default function Index() {
                 onRestart={() => setShowRestartDialog(true)}
                 onLock={() => setShowLockDialog(true)}
                 onReplay={startReplayMode}
-                onViewAudit={() => {
-                  const tabsList = document.querySelector('[value="audit"]');
-                  if (tabsList instanceof HTMLElement) tabsList.click();
-                }}
+                onViewAudit={() => setActiveTab('audit')}
               />
             </TabsContent>
 
