@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Participant, RaffleConfig } from '@/types/raffle';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
@@ -19,15 +19,16 @@ const CENTER_ROW = 2; // 0-indexed, middle of 5 visible rows
 const createEasingFunction = (speed: 'slow' | 'normal' | 'fast') => {
   return (t: number): number => {
     if (speed === 'slow') {
-      // Slow: Phase 1 = 40% time (50% distance), Phase 2 = 30% time (30% distance), Phase 3 = 30% time (20% distance)
-      if (t < 0.4) {
-        return 0.5 * (t / 0.4);
-      } else if (t < 0.7) {
-        const mediumProgress = (t - 0.4) / 0.3;
-        return 0.5 + 0.3 * mediumProgress;
+      // Slow: Gentler start, longer readable slow-down
+      // Phase 1 = 30% time (35% distance), Phase 2 = 30% time (30% distance), Phase 3 = 40% time (35% distance)
+      if (t < 0.3) {
+        return 0.35 * (t / 0.3);
+      } else if (t < 0.6) {
+        const mediumProgress = (t - 0.3) / 0.3;
+        return 0.35 + 0.3 * mediumProgress;
       } else {
-        const slowProgress = (t - 0.7) / 0.3;
-        return 0.8 + 0.2 * (1 - Math.pow(1 - slowProgress, 4));
+        const slowProgress = (t - 0.6) / 0.4;
+        return 0.65 + 0.35 * (1 - Math.pow(1 - slowProgress, 4));
       }
     } else if (speed === 'fast') {
       // Fast: Phase 1 = 60% time (70% distance), Phase 2 = 20% time (20% distance), Phase 3 = 20% time (10% distance)
@@ -65,7 +66,7 @@ export function SlotAnimation({
 }: SlotAnimationProps) {
   const animationDuration = (config?.animationDuration ?? 6) * 1000;
   const animationSpeed = config?.animationSpeed ?? 'normal';
-  const easingFunction = createEasingFunction(animationSpeed);
+  const easingFunction = useMemo(() => createEasingFunction(animationSpeed), [animationSpeed]);
   const prefersReducedMotion = useReducedMotion();
   const animationRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
