@@ -18,13 +18,12 @@ export function SlotAnimation({
   isBonusPrize 
 }: SlotAnimationProps) {
   const prefersReducedMotion = useReducedMotion();
-  const [displayNames, setDisplayNames] = useState<string[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const intervalRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
   // Generate random display names for animation
   const generateRandomNames = useCallback(() => {
+    if (participants.length === 0) return Array(20).fill('Loading...');
     const names: string[] = [];
     for (let i = 0; i < 20; i++) {
       const randomParticipant = participants[Math.floor(Math.random() * participants.length)];
@@ -32,6 +31,10 @@ export function SlotAnimation({
     }
     return names;
   }, [participants]);
+
+  // Initialize with names immediately
+  const [displayNames, setDisplayNames] = useState<string[]>(() => generateRandomNames());
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     if (isSpinning && participants.length > 0) {
