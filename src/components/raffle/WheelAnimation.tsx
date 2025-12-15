@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Participant } from '@/types/raffle';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 interface WheelAnimationProps {
   participants: Participant[];
@@ -19,6 +20,7 @@ export function WheelAnimation({
   const [rotation, setRotation] = useState(0);
   const [showWinner, setShowWinner] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = useReducedMotion();
   
   // Select up to 12 participants for wheel display
   const wheelParticipants = participants.slice(0, 12);
@@ -94,6 +96,16 @@ export function WheelAnimation({
   useEffect(() => {
     if (isSpinning) {
       setShowWinner(false);
+      
+      // Skip animation if user prefers reduced motion
+      if (prefersReducedMotion) {
+        setTimeout(() => {
+          setShowWinner(true);
+          setTimeout(onSpinComplete, 300);
+        }, 500);
+        return;
+      }
+      
       let currentRotation = rotation;
       let speed = 20;
       const targetRotation = rotation + 1800 + Math.random() * 720;
@@ -114,7 +126,7 @@ export function WheelAnimation({
       
       spin();
     }
-  }, [isSpinning]);
+  }, [isSpinning, prefersReducedMotion]);
 
   if (showWinner && winner) {
     return (

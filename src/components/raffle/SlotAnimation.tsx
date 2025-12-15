@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Participant } from '@/types/raffle';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 interface SlotAnimationProps {
   participants: Participant[];
@@ -16,6 +17,7 @@ export function SlotAnimation({
   onSpinComplete,
   isBonusPrize 
 }: SlotAnimationProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [displayNames, setDisplayNames] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const intervalRef = useRef<number | null>(null);
@@ -33,6 +35,14 @@ export function SlotAnimation({
 
   useEffect(() => {
     if (isSpinning && participants.length > 0) {
+      // If user prefers reduced motion, skip animation and reveal immediately
+      if (prefersReducedMotion) {
+        timeoutRef.current = window.setTimeout(() => {
+          onSpinComplete();
+        }, 500);
+        return;
+      }
+
       setDisplayNames(generateRandomNames());
       
       // Start fast cycling
@@ -73,7 +83,7 @@ export function SlotAnimation({
       if (intervalRef.current) clearTimeout(intervalRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [isSpinning, participants, winner, generateRandomNames, onSpinComplete]);
+  }, [isSpinning, participants, winner, generateRandomNames, onSpinComplete, prefersReducedMotion]);
 
   const visibleNames = displayNames.slice(
     Math.max(0, currentIndex - 2),
