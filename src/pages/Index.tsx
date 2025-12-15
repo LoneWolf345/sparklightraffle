@@ -177,6 +177,7 @@ export default function Index() {
     
     setShowPresenter(true);
     setCurrentWinner(null);
+    setIsDrawing(false);
     setIsReplayMode(false);
   }, [participants, config, drawId]);
 
@@ -317,6 +318,8 @@ export default function Index() {
   const exitPresenterMode = useCallback(() => {
     setShowPresenter(false);
     setIsReplayMode(false);
+    setIsDrawing(false);
+    setCurrentWinner(null);
     // Transfer bulk winners to main winners if applicable
     if (bulkWinners.length > 0) {
       setWinners(bulkWinners);
