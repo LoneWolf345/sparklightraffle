@@ -1,0 +1,60 @@
+export interface Participant {
+  id: string;
+  name: string;
+  email: string;
+  entries: number;
+  team?: string;
+  region?: string;
+  manager?: string;
+  employeeId?: string;
+}
+
+export interface Winner {
+  participant: Participant;
+  drawNumber: number;
+  timestamp: Date;
+  isBonusPrize?: boolean;
+}
+
+export interface RaffleConfig {
+  numberOfWinners: number;
+  allowRepeats: boolean;
+  animationStyle: 'slot' | 'wheel';
+  revealMode: 'sequential' | 'bulk';
+  bonusRoundInterval: number; // Every Nth winner is bonus (0 = disabled)
+  showEmail: boolean;
+  soundEnabled: boolean;
+}
+
+export interface ImportSummary {
+  totalParticipants: number;
+  totalTickets: number;
+  duplicateCount: number;
+  errorRows: { row: number; error: string }[];
+}
+
+export interface AuditLog {
+  drawId: string;
+  timestamp: Date;
+  datasetChecksum: string;
+  seed: string;
+  config: RaffleConfig;
+  totalParticipants: number;
+  totalTickets: number;
+  winners: {
+    drawNumber: number;
+    name: string;
+    email: string;
+    entries: number;
+    timestamp: string;
+  }[];
+}
+
+export interface RaffleState {
+  participants: Participant[];
+  winners: Winner[];
+  config: RaffleConfig;
+  isDrawing: boolean;
+  isLocked: boolean;
+  auditLog: AuditLog | null;
+}
