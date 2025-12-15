@@ -14,9 +14,17 @@ const ROW_HEIGHT = 80;
 const VISIBLE_ROWS = 5;
 const CENTER_ROW = 2; // 0-indexed, middle of 5 visible rows
 
-// Exponential ease-out for dramatic slowdown
-const easeOutExpo = (t: number): number => {
-  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+// Custom easing with dramatic slowdown - fast start, very slow crawl at end
+const dramaticEase = (t: number): number => {
+  // Use a combination: fast through 80%, then crawl the last 20%
+  if (t < 0.8) {
+    // Cover 90% of distance in first 80% of time (fast)
+    return 0.9 * (t / 0.8);
+  } else {
+    // Cover remaining 10% of distance in last 20% of time (slow crawl)
+    const crawlProgress = (t - 0.8) / 0.2;
+    return 0.9 + 0.1 * (1 - Math.pow(1 - crawlProgress, 3));
+  }
 };
 
 export function SlotAnimation({ 
@@ -107,8 +115,8 @@ export function SlotAnimation({
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / animationDuration, 1);
         
-        // Apply easing for dramatic slowdown
-        const easedProgress = easeOutExpo(progress);
+        // Apply dramatic easing for suspenseful slowdown
+        const easedProgress = dramaticEase(progress);
         
         // Calculate current scroll position
         const currentOffset = easedProgress * targetOffset;
@@ -121,10 +129,10 @@ export function SlotAnimation({
           setScrollOffset(targetOffset);
           setAnimationComplete(true);
           
-          // Brief pause before celebration
+          // Hold on winner for 500ms before celebration
           timeoutRef.current = window.setTimeout(() => {
             onSpinComplete();
-          }, 800);
+          }, 500);
         }
       };
 
