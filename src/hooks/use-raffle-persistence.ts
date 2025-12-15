@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Participant, Winner, RaffleConfig } from '@/types/raffle';
 import { toast } from '@/hooks/use-toast';
 import { Json } from '@/integrations/supabase/types';
+import { BrandingConfig } from '@/components/raffle/BrandingPanel';
 
 export interface SavedDraw {
   id: string;
@@ -23,7 +24,8 @@ export function useRafflePersistence() {
     config: RaffleConfig,
     seed: string,
     datasetChecksum: string,
-    isLocked: boolean
+    isLocked: boolean,
+    branding: BrandingConfig
   ): Promise<string | null> => {
     try {
       // First, check if draw already exists
@@ -43,6 +45,9 @@ export function useRafflePersistence() {
           .update({
             config: config as unknown as Json,
             is_locked: isLocked,
+            logo_url: branding.logoUrl,
+            event_banner_url: branding.eventBannerUrl,
+            use_event_banner: branding.useEventBanner,
           })
           .eq('id', drawUuid);
 
@@ -66,6 +71,9 @@ export function useRafflePersistence() {
             total_tickets: participants.reduce((sum, p) => sum + p.entries, 0),
             participants: participants as unknown as Json,
             is_locked: isLocked,
+            logo_url: branding.logoUrl,
+            event_banner_url: branding.eventBannerUrl,
+            use_event_banner: branding.useEventBanner,
           })
           .select('id')
           .single();
@@ -147,6 +155,7 @@ export function useRafflePersistence() {
     drawId: string;
     datasetChecksum: string;
     isLocked: boolean;
+    branding: BrandingConfig;
   } | null> => {
     try {
       const { data: draw, error: drawError } = await supabase
@@ -190,6 +199,11 @@ export function useRafflePersistence() {
         drawId: draw.draw_id,
         datasetChecksum: draw.dataset_checksum,
         isLocked: draw.is_locked,
+        branding: {
+          logoUrl: draw.logo_url || null,
+          eventBannerUrl: draw.event_banner_url || null,
+          useEventBanner: draw.use_event_banner,
+        },
       };
     } catch (error) {
       console.error('Error loading draw:', error);

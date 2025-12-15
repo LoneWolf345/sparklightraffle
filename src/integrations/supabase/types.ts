@@ -20,36 +20,45 @@ export type Database = {
           created_at: string
           dataset_checksum: string
           draw_id: string
+          event_banner_url: string | null
           id: string
           is_locked: boolean
+          logo_url: string | null
           participants: Json
           seed: string
           total_participants: number
           total_tickets: number
+          use_event_banner: boolean
         }
         Insert: {
           config: Json
           created_at?: string
           dataset_checksum: string
           draw_id: string
+          event_banner_url?: string | null
           id?: string
           is_locked?: boolean
+          logo_url?: string | null
           participants: Json
           seed: string
           total_participants: number
           total_tickets: number
+          use_event_banner?: boolean
         }
         Update: {
           config?: Json
           created_at?: string
           dataset_checksum?: string
           draw_id?: string
+          event_banner_url?: string | null
           id?: string
           is_locked?: boolean
+          logo_url?: string | null
           participants?: Json
           seed?: string
           total_participants?: number
           total_tickets?: number
+          use_event_banner?: boolean
         }
         Relationships: []
       }
