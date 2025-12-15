@@ -54,6 +54,7 @@ export default function Index() {
   const [drawNumber, setDrawNumber] = useState(0);
   const [replayIndex, setReplayIndex] = useState(0);
   const [isReplayMode, setIsReplayMode] = useState(false);
+  const [bulkWinners, setBulkWinners] = useState<Winner[]>([]);
 
   // Dialog state
   const [showRestartDialog, setShowRestartDialog] = useState(false);
@@ -316,7 +317,51 @@ export default function Index() {
   const exitPresenterMode = useCallback(() => {
     setShowPresenter(false);
     setIsReplayMode(false);
-  }, []);
+    // Transfer bulk winners to main winners if applicable
+    if (bulkWinners.length > 0) {
+      setWinners(bulkWinners);
+      setDrawNumber(bulkWinners.length);
+      // Update audit log with bulk winners
+      if (drawId) {
+        setAuditLog(createAuditLog(drawId, participants, bulkWinners, config, seed));
+      }
+      setBulkWinners([]);
+    }
+  }, [bulkWinners, drawId, participants, config, seed]);
+
+  const handleBulkDraw = useCallback(() => {
+    if (participants.length === 0) return;
+
+    const drawnWinners: Winner[] = [];
+    const excludeEmails = new Set<string>();
+    const numToDraw = Math.min(config.numberOfWinners, config.allowRepeats ? config.numberOfWinners : participants.length);
+
+    for (let i = 0; i < numToDraw; i++) {
+      const winner = weightedRandomSelect(
+        participants, 
+        seed, 
+        config.allowRepeats ? new Set<string>() : excludeEmails
+      );
+      
+      if (!winner) break;
+
+      const isBonusPrize = config.bonusRoundInterval > 0 && 
+        (i + 1) % config.bonusRoundInterval === 0;
+
+      drawnWinners.push({
+        participant: winner,
+        drawNumber: i + 1,
+        timestamp: new Date(),
+        isBonusPrize,
+      });
+
+      if (!config.allowRepeats) {
+        excludeEmails.add(winner.email);
+      }
+    }
+
+    setBulkWinners(drawnWinners);
+  }, [participants, config, seed]);
 
   const isComplete = isReplayMode 
     ? replayIndex >= winners.length 
@@ -337,6 +382,8 @@ export default function Index() {
         onSpinComplete={handleSpinComplete}
         onExit={exitPresenterMode}
         isComplete={isComplete}
+        onBulkDraw={handleBulkDraw}
+        bulkWinners={bulkWinners}
       />
     );
   }

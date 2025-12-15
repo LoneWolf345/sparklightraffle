@@ -1,8 +1,9 @@
 import { useEffect, useCallback, useState } from 'react';
-import { X, ChevronRight, Trophy } from 'lucide-react';
+import { X, ChevronRight, Trophy, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SlotAnimation } from './SlotAnimation';
 import { WheelAnimation } from './WheelAnimation';
+import { BulkReveal } from './BulkReveal';
 import { PrizeDisplay } from './PrizeDisplay';
 import { Participant, Winner, RaffleConfig } from '@/types/raffle';
 import { BrandingConfig } from './BrandingPanel';
@@ -24,6 +25,8 @@ interface PresenterModeProps {
   onSpinComplete: () => void;
   onExit: () => void;
   isComplete: boolean;
+  onBulkDraw?: () => void;
+  bulkWinners?: Winner[];
 }
 
 export function PresenterMode({
@@ -39,8 +42,12 @@ export function PresenterMode({
   onSpinComplete,
   onExit,
   isComplete,
+  onBulkDraw,
+  bulkWinners,
 }: PresenterModeProps) {
   const [showingResult, setShowingResult] = useState(false);
+  const [bulkRevealing, setBulkRevealing] = useState(false);
+  const [bulkComplete, setBulkComplete] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const { playDrumroll, playWinnerReveal, playBonusPrize, playComplete } = useSoundEffects(config.soundEnabled);
 
@@ -115,6 +122,20 @@ export function PresenterMode({
     onDrawNext();
   }, [onDrawNext, playDrumroll]);
 
+  const handleBulkDraw = useCallback(() => {
+    if (onBulkDraw) {
+      playDrumroll();
+      setBulkRevealing(true);
+      onBulkDraw();
+    }
+  }, [onBulkDraw, playDrumroll]);
+
+  const handleBulkRevealComplete = useCallback(() => {
+    setBulkComplete(true);
+    triggerConfetti();
+    playComplete();
+  }, [triggerConfetti, playComplete]);
+
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -122,24 +143,30 @@ export function PresenterMode({
         onExit();
       } else if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
-        if (!isDrawing && !isComplete && currentWinner === null) {
-          handleDrawNext();
-        } else if (showingResult && !isComplete) {
-          handleDrawNext();
+        if (config.revealMode === 'bulk') {
+          if (!bulkRevealing && !bulkComplete && onBulkDraw) {
+            handleBulkDraw();
+          }
+        } else {
+          if (!isDrawing && !isComplete && currentWinner === null) {
+            handleDrawNext();
+          } else if (showingResult && !isComplete) {
+            handleDrawNext();
+          }
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDrawing, isComplete, showingResult, handleDrawNext, onExit, currentWinner]);
+  }, [isDrawing, isComplete, showingResult, handleDrawNext, onExit, currentWinner, config.revealMode, bulkRevealing, bulkComplete, handleBulkDraw, onBulkDraw]);
 
-  // Play completion sound when all winners are drawn
+  // Play completion sound when all winners are drawn (sequential mode)
   useEffect(() => {
-    if (isComplete && winners.length > 0) {
+    if (config.revealMode === 'sequential' && isComplete && winners.length > 0) {
       playComplete();
     }
-  }, [isComplete, winners.length, playComplete]);
+  }, [isComplete, winners.length, playComplete, config.revealMode]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -164,14 +191,18 @@ export function PresenterMode({
           <div>
             <h1 className="text-2xl font-bold">Sparklight Virtual Raffle</h1>
             <p className="text-sm text-muted-foreground">
-              Drawing {drawNumber} of {config.numberOfWinners}
+              {config.revealMode === 'bulk' 
+                ? `Drawing ${config.numberOfWinners} winners`
+                : `Drawing ${drawNumber} of ${config.numberOfWinners}`}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
             <div className="text-sm text-muted-foreground">Winners Drawn</div>
-            <div className="text-2xl font-bold">{winners.length}</div>
+            <div className="text-2xl font-bold">
+              {config.revealMode === 'bulk' ? (bulkWinners?.length || 0) : winners.length}
+            </div>
           </div>
           <Button variant="ghost" size="icon" onClick={onExit}>
             <X className="h-6 w-6" />
@@ -180,49 +211,83 @@ export function PresenterMode({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        {isComplete ? (
-          <div className="text-center space-y-6 animate-fade-in">
-            <Trophy className="h-24 w-24 mx-auto text-primary" />
-            <h2 className="text-5xl font-bold">All Winners Selected!</h2>
-            <p className="text-xl text-muted-foreground">
-              {winners.length} winners have been drawn
-            </p>
-            <Button size="lg" onClick={onExit} className="mt-8">
-              View Results
-            </Button>
-          </div>
-        ) : isDrawing || currentWinner ? (
-          config.animationStyle === 'slot' ? (
-            <SlotAnimation
-              participants={participants}
-              winner={currentWinner}
-              isSpinning={isDrawing}
-              onSpinComplete={handleSpinComplete}
-              isBonusPrize={isBonusPrize}
+      <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-hidden">
+        {/* Bulk Reveal Mode */}
+        {config.revealMode === 'bulk' ? (
+          bulkComplete ? (
+            <div className="text-center space-y-6 animate-fade-in">
+              <Trophy className="h-24 w-24 mx-auto text-primary" />
+              <h2 className="text-5xl font-bold">All Winners Selected!</h2>
+              <p className="text-xl text-muted-foreground">
+                {bulkWinners?.length || 0} winners have been drawn
+              </p>
+              <Button size="lg" onClick={onExit} className="mt-8">
+                View Results
+              </Button>
+            </div>
+          ) : bulkRevealing && bulkWinners && bulkWinners.length > 0 ? (
+            <BulkReveal
+              winners={bulkWinners}
+              prizes={prizes}
+              showEmail={config.showEmail}
+              onRevealComplete={handleBulkRevealComplete}
             />
           ) : (
-            <WheelAnimation
-              participants={participants}
-              winner={currentWinner}
-              isSpinning={isDrawing}
-              onSpinComplete={handleSpinComplete}
-              isBonusPrize={isBonusPrize}
-            />
+            <div className="text-center space-y-6">
+              <Users className="h-24 w-24 mx-auto text-primary opacity-80" />
+              <div className="text-6xl font-bold text-primary">
+                Ready to Draw All Winners!
+              </div>
+              <p className="text-xl text-muted-foreground">
+                {config.numberOfWinners} winners will be revealed at once
+              </p>
+            </div>
           )
         ) : (
-          <div className="text-center space-y-6">
-            <div className="text-6xl font-bold text-primary">
-              {drawNumber === 0 ? 'Ready to Draw!' : `Winner #${drawNumber + 1}`}
+          /* Sequential Reveal Mode */
+          isComplete ? (
+            <div className="text-center space-y-6 animate-fade-in">
+              <Trophy className="h-24 w-24 mx-auto text-primary" />
+              <h2 className="text-5xl font-bold">All Winners Selected!</h2>
+              <p className="text-xl text-muted-foreground">
+                {winners.length} winners have been drawn
+              </p>
+              <Button size="lg" onClick={onExit} className="mt-8">
+                View Results
+              </Button>
             </div>
-            <p className="text-xl text-muted-foreground">
-              Press Space or click the button below to reveal
-            </p>
-          </div>
+          ) : isDrawing || currentWinner ? (
+            config.animationStyle === 'slot' ? (
+              <SlotAnimation
+                participants={participants}
+                winner={currentWinner}
+                isSpinning={isDrawing}
+                onSpinComplete={handleSpinComplete}
+                isBonusPrize={isBonusPrize}
+              />
+            ) : (
+              <WheelAnimation
+                participants={participants}
+                winner={currentWinner}
+                isSpinning={isDrawing}
+                onSpinComplete={handleSpinComplete}
+                isBonusPrize={isBonusPrize}
+              />
+            )
+          ) : (
+            <div className="text-center space-y-6">
+              <div className="text-6xl font-bold text-primary">
+                {drawNumber === 0 ? 'Ready to Draw!' : `Winner #${drawNumber + 1}`}
+              </div>
+              <p className="text-xl text-muted-foreground">
+                Press Space or click the button below to reveal
+              </p>
+            </div>
+          )
         )}
 
-        {/* Winner Info */}
-        {showingResult && currentWinner && (
+        {/* Winner Info - Sequential mode only */}
+        {config.revealMode === 'sequential' && showingResult && currentWinner && (
           <div className="mt-4 text-center animate-fade-in space-y-4">
             {config.showEmail && (
               <div className="text-xl text-muted-foreground">
@@ -240,35 +305,48 @@ export function PresenterMode({
 
       {/* Footer Controls */}
       <div className="p-6 border-t flex justify-center gap-4">
-        {!isComplete && !isDrawing && (
-          <Button 
-            size="lg" 
-            onClick={handleDrawNext}
-            className="text-lg px-8 py-6"
-          >
-            {drawNumber === 0 ? (
-              <>
-                Start Drawing
-                <ChevronRight className="ml-2 h-5 w-5" />
-              </>
-            ) : showingResult ? (
-              <>
-                Next Winner
-                <ChevronRight className="ml-2 h-5 w-5" />
-              </>
-            ) : (
-              <>
-                Draw Winner #{drawNumber + 1}
-                <ChevronRight className="ml-2 h-5 w-5" />
-              </>
-            )}
-          </Button>
+        {config.revealMode === 'bulk' ? (
+          !bulkRevealing && !bulkComplete && onBulkDraw && (
+            <Button 
+              size="lg" 
+              onClick={handleBulkDraw}
+              className="text-lg px-8 py-6"
+            >
+              <Users className="mr-2 h-5 w-5" />
+              Draw All {config.numberOfWinners} Winners
+            </Button>
+          )
+        ) : (
+          !isComplete && !isDrawing && (
+            <Button 
+              size="lg" 
+              onClick={handleDrawNext}
+              className="text-lg px-8 py-6"
+            >
+              {drawNumber === 0 ? (
+                <>
+                  Start Drawing
+                  <ChevronRight className="ml-2 h-5 w-5" />
+                </>
+              ) : showingResult ? (
+                <>
+                  Next Winner
+                  <ChevronRight className="ml-2 h-5 w-5" />
+                </>
+              ) : (
+                <>
+                  Draw Winner #{drawNumber + 1}
+                  <ChevronRight className="ml-2 h-5 w-5" />
+                </>
+              )}
+            </Button>
+          )
         )}
       </div>
 
       {/* Keyboard hint */}
       <div className="absolute bottom-4 left-4 text-sm text-muted-foreground">
-        Press <kbd className="px-2 py-1 bg-muted rounded text-xs">Space</kbd> for next • 
+        Press <kbd className="px-2 py-1 bg-muted rounded text-xs">Space</kbd> to {config.revealMode === 'bulk' ? 'reveal all' : 'next'} • 
         <kbd className="px-2 py-1 bg-muted rounded text-xs ml-2">Esc</kbd> to exit
       </div>
     </div>
