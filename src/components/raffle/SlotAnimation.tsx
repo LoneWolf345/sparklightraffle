@@ -95,7 +95,8 @@ export function SlotAnimation({
         return;
       }
 
-      // Calculate the target scroll position (winner in center)
+      // Calculate the target scroll position
+      // When scrollOffset = winnerPos * ROW_HEIGHT, the winner will be at centeredIndex = winnerPos
       const targetOffset = winnerPos * ROW_HEIGHT;
       
       // Animation parameters
@@ -152,15 +153,21 @@ export function SlotAnimation({
     );
   }
 
-  // Calculate which names are visible based on scroll offset
-  const firstVisibleIndex = Math.floor(scrollOffset / ROW_HEIGHT);
-  const offsetWithinRow = scrollOffset % ROW_HEIGHT;
+  // The centered name index - this is the single source of truth
+  // The center of the 400px container is at 200px, which is CENTER_ROW * ROW_HEIGHT + ROW_HEIGHT/2
+  // A name at index N is at position N * ROW_HEIGHT from the top of the scroll content
+  // For it to be centered, we need: scrollOffset = N * ROW_HEIGHT
+  const centeredIndex = Math.round(scrollOffset / ROW_HEIGHT);
 
-  // Get visible names with some buffer
-  const visibleNames = displayNames.slice(
-    Math.max(0, firstVisibleIndex - 1),
-    firstVisibleIndex + VISIBLE_ROWS + 2
-  );
+  // Calculate visible range with buffer
+  const startIndex = Math.max(0, centeredIndex - CENTER_ROW - 2);
+  const endIndex = Math.min(displayNames.length, centeredIndex + (VISIBLE_ROWS - CENTER_ROW) + 2);
+  const visibleNames = displayNames.slice(startIndex, endIndex);
+
+  // Container offset: position the scroll so centeredIndex is at the purple bar
+  // Purple bar is at CENTER_ROW * ROW_HEIGHT from container top
+  // We want name at centeredIndex to appear there
+  const containerOffset = (CENTER_ROW * ROW_HEIGHT) - scrollOffset;
 
   return (
     <div className="relative h-[400px] w-full max-w-4xl mx-auto overflow-hidden">
@@ -168,20 +175,20 @@ export function SlotAnimation({
       <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-background to-transparent z-10" />
       <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent z-10" />
       
-      {/* Center highlight */}
-      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-20 bg-primary/10 border-y-2 border-primary z-5" />
+      {/* Center highlight bar */}
+      <div className="absolute inset-x-0 z-5" style={{ top: CENTER_ROW * ROW_HEIGHT, height: ROW_HEIGHT }}>
+        <div className="h-full bg-primary/10 border-y-2 border-primary" />
+      </div>
       
       {/* Scrolling names */}
       <div 
         className="absolute inset-x-0 z-20"
-        style={{ 
-          transform: `translateY(${(CENTER_ROW * ROW_HEIGHT) - offsetWithinRow - ((firstVisibleIndex - Math.max(0, firstVisibleIndex - 1)) * ROW_HEIGHT)}px)`,
-        }}
+        style={{ transform: `translateY(${containerOffset}px)` }}
       >
         {visibleNames.map((name, index) => {
-          const actualIndex = Math.max(0, firstVisibleIndex - 1) + index;
-          const isCenter = actualIndex === Math.floor(scrollOffset / ROW_HEIGHT) + CENTER_ROW ||
-                          (actualIndex === winnerPosition && animationComplete);
+          const actualIndex = startIndex + index;
+          // Simple: is this name at the centered position?
+          const isCenter = actualIndex === centeredIndex;
           
           return (
             <div
@@ -191,6 +198,7 @@ export function SlotAnimation({
                 transition-all duration-75
                 ${isCenter ? 'text-primary scale-110' : 'text-muted-foreground/40 scale-90'}
               `}
+              style={{ transform: `translateY(${actualIndex * ROW_HEIGHT}px)`, position: 'absolute', width: '100%' }}
             >
               {name}
             </div>
