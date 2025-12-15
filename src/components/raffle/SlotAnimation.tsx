@@ -121,7 +121,7 @@ export function SlotAnimation({
       
       {/* Scrolling names */}
       <div 
-        className="absolute inset-x-0 transition-transform duration-100"
+        className="absolute inset-x-0 transition-transform duration-100 z-20"
         style={{ 
           transform: `translateY(${-currentIndex * 80 + 160}px)`,
         }}
