@@ -71,7 +71,7 @@ export default function Index() {
       clearTimeout(saveTimeoutRef.current);
     }
     saveTimeoutRef.current = setTimeout(() => {
-      saveDraw(drawId, participants, winners, config, seed, datasetChecksum, isLocked);
+      saveDraw(drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding);
     }, 1000);
 
     return () => {
@@ -79,7 +79,7 @@ export default function Index() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [drawId, participants, winners, config, seed, datasetChecksum, isLocked, saveDraw]);
+  }, [drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding, saveDraw]);
 
   const handleLoadDraw = useCallback(async (id: string) => {
     const data = await loadDraw(id);
@@ -91,6 +91,7 @@ export default function Index() {
       setDrawId(data.drawId);
       setDatasetChecksum(data.datasetChecksum);
       setIsLocked(data.isLocked);
+      setBranding(data.branding);
       setDrawNumber(data.winners.length);
       setAuditLog(createAuditLog(
         data.drawId, 
