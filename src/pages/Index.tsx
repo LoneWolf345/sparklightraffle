@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Trophy, Play, Users, Ticket, AlertTriangle } from 'lucide-react';
+import { Trophy, Play, Users, Ticket, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { ImportPanel } from '@/components/raffle/ImportPanel';
 import { ConfigPanel } from '@/components/raffle/ConfigPanel';
 import { WinnersPanel } from '@/components/raffle/WinnersPanel';
 import { AuditPanel } from '@/components/raffle/AuditPanel';
+import { ParticipantsPanel } from '@/components/raffle/ParticipantsPanel';
 import { PresenterMode } from '@/components/raffle/PresenterMode';
 import { Participant, Winner, RaffleConfig, ImportSummary, AuditLog } from '@/types/raffle';
 import { weightedRandomSelect, generateSeed, generateDrawId, createAuditLog } from '@/lib/raffle';
@@ -37,6 +38,8 @@ export default function Index() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentWinner, setCurrentWinner] = useState<Participant | null>(null);
   const [drawNumber, setDrawNumber] = useState(0);
+  const [replayIndex, setReplayIndex] = useState(0);
+  const [isReplayMode, setIsReplayMode] = useState(false);
 
   // Dialog state
   const [showRestartDialog, setShowRestartDialog] = useState(false);
@@ -83,12 +86,38 @@ export default function Index() {
     setShowPresenter(true);
     setDrawNumber(0);
     setCurrentWinner(null);
+    setIsReplayMode(false);
 
     // Initialize audit log
     setAuditLog(createAuditLog(newDrawId, participants, [], config, newSeed));
   }, [participants, config]);
 
+  const startReplayMode = useCallback(() => {
+    if (winners.length === 0) {
+      toast({
+        title: 'No Winners',
+        description: 'No winners to replay',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsReplayMode(true);
+    setReplayIndex(0);
+    setDrawNumber(0);
+    setCurrentWinner(null);
+    setShowPresenter(true);
+  }, [winners]);
+
   const handleDrawNext = useCallback(() => {
+    // Replay mode logic
+    if (isReplayMode) {
+      if (replayIndex >= winners.length) return;
+      setIsDrawing(true);
+      setCurrentWinner(winners[replayIndex].participant);
+      return;
+    }
+
+    // Normal draw logic
     if (winners.length >= config.numberOfWinners) return;
 
     setIsDrawing(true);
@@ -109,12 +138,21 @@ export default function Index() {
         variant: 'destructive',
       });
     }
-  }, [participants, winners, config, seed]);
+  }, [participants, winners, config, seed, isReplayMode, replayIndex]);
 
   const handleSpinComplete = useCallback(() => {
     setIsDrawing(false);
     
     if (currentWinner) {
+      // Replay mode - just advance to next winner
+      if (isReplayMode) {
+        setDrawNumber(replayIndex + 1);
+        setReplayIndex(prev => prev + 1);
+        setCurrentWinner(null);
+        return;
+      }
+
+      // Normal mode - record the winner
       const newDrawNumber = drawNumber + 1;
       const isBonusPrize = config.bonusRoundInterval > 0 && 
         newDrawNumber % config.bonusRoundInterval === 0;
@@ -143,7 +181,7 @@ export default function Index() {
 
       setCurrentWinner(null);
     }
-  }, [currentWinner, drawNumber, config.bonusRoundInterval]);
+  }, [currentWinner, drawNumber, config.bonusRoundInterval, isReplayMode, replayIndex]);
 
   const handleUndo = useCallback(() => {
     if (winners.length === 0 || isLocked) return;
@@ -188,9 +226,12 @@ export default function Index() {
 
   const exitPresenterMode = useCallback(() => {
     setShowPresenter(false);
+    setIsReplayMode(false);
   }, []);
 
-  const isComplete = winners.length >= config.numberOfWinners;
+  const isComplete = isReplayMode 
+    ? replayIndex >= winners.length 
+    : winners.length >= config.numberOfWinners;
 
   if (showPresenter) {
     return (
@@ -252,8 +293,11 @@ export default function Index() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="setup" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-lg grid-cols-4">
             <TabsTrigger value="setup">Setup</TabsTrigger>
+            <TabsTrigger value="participants">
+              Participants {participants.length > 0 && `(${participants.length})`}
+            </TabsTrigger>
             <TabsTrigger value="winners">
               Winners {winners.length > 0 && `(${winners.length})`}
             </TabsTrigger>
@@ -294,7 +338,19 @@ export default function Index() {
             )}
           </TabsContent>
 
-          <TabsContent value="winners">
+          <TabsContent value="participants">
+            <ParticipantsPanel participants={participants} />
+          </TabsContent>
+
+          <TabsContent value="winners" className="space-y-4">
+            {winners.length > 0 && (
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={startReplayMode}>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Replay Presentation
+                </Button>
+              </div>
+            )}
             <WinnersPanel
               winners={winners}
               isLocked={isLocked}
