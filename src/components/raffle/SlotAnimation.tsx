@@ -42,6 +42,7 @@ export function SlotAnimation({
   const [displayNames, setDisplayNames] = useState<string[]>([]);
   const [winnerPosition, setWinnerPosition] = useState(0);
   const [animationComplete, setAnimationComplete] = useState(false);
+  const [showBounce, setShowBounce] = useState(false);
 
   // Build the scroll list with shuffled participants and winner at calculated position
   const buildScrollList = useCallback((participantList: Participant[], winnerParticipant: Participant | null) => {
@@ -86,6 +87,7 @@ export function SlotAnimation({
     if (isSpinning && participants.length > 0 && winner) {
       // Reset state
       setAnimationComplete(false);
+      setShowBounce(false);
       setScrollOffset(0);
 
       // Build the scroll list with winner positioned
@@ -99,7 +101,7 @@ export function SlotAnimation({
         setAnimationComplete(true);
         timeoutRef.current = window.setTimeout(() => {
           onSpinComplete();
-        }, 500);
+        }, 1000);
         return;
       }
 
@@ -127,12 +129,15 @@ export function SlotAnimation({
         } else {
           // Ensure we land exactly on the winner
           setScrollOffset(targetOffset);
-          setAnimationComplete(true);
+          setShowBounce(true);
           
-          // Hold on winner for 500ms before celebration
+          // After bounce animation (300ms), mark complete and hold for 1s
           timeoutRef.current = window.setTimeout(() => {
-            onSpinComplete();
-          }, 500);
+            setAnimationComplete(true);
+            timeoutRef.current = window.setTimeout(() => {
+              onSpinComplete();
+            }, 1000);
+          }, 300);
         }
       };
 
@@ -205,6 +210,7 @@ export function SlotAnimation({
                 h-20 flex items-center justify-center text-4xl md:text-5xl font-bold
                 transition-all duration-75
                 ${isCenter ? 'text-primary scale-110' : 'text-muted-foreground/40 scale-90'}
+                ${isCenter && showBounce ? 'animate-[bounce_0.3s_ease-out]' : ''}
               `}
               style={{ transform: `translateY(${actualIndex * ROW_HEIGHT}px)`, position: 'absolute', width: '100%' }}
             >
