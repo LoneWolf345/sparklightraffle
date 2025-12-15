@@ -6,11 +6,26 @@ import { WheelAnimation } from './WheelAnimation';
 import { BulkReveal } from './BulkReveal';
 import { PrizeDisplay } from './PrizeDisplay';
 import { Participant, Winner, RaffleConfig } from '@/types/raffle';
-import { BrandingConfig } from './BrandingPanel';
+import { BrandingConfig, BannerSize, PrizeImageSize } from './BrandingPanel';
 import { PrizeConfig, getPrizeForWinner } from '@/types/prizes';
 import { useSoundEffects } from '@/hooks/use-sound-effects';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import confetti from 'canvas-confetti';
+
+// Banner size class mapping
+const bannerSizeClasses: Record<BannerSize, string> = {
+  small: 'h-16 max-w-[400px] object-contain',
+  medium: 'h-24 max-w-[600px] object-contain',
+  large: 'h-32 max-w-[800px] object-contain',
+  fullWidth: 'h-40 w-full object-cover',
+};
+
+// Prize size mapping from branding config to PrizeDisplay size
+const prizeSizeMap: Record<PrizeImageSize, 'lg' | 'xl' | 'xxl'> = {
+  standard: 'lg',
+  large: 'xl',
+  extraLarge: 'xxl',
+};
 
 interface PresenterModeProps {
   participants: Participant[];
@@ -170,15 +185,21 @@ export function PresenterMode({
     }
   }, [isComplete, winners.length, playComplete, config.revealMode]);
 
+  // Get the prize display size from branding config
+  const prizeDisplaySize = prizeSizeMap[branding.prizeImageSize || 'large'];
+
   // Render header based on branding configuration
   const renderHeader = () => {
+    const bannerSize = branding.bannerSize || 'large';
+    const isFullWidth = bannerSize === 'fullWidth';
+    
     // If event banner is provided, show only the banner (no text)
     if (branding.eventBannerUrl) {
       return (
         <img
           src={branding.eventBannerUrl}
           alt="Event banner"
-          className="h-16 max-w-[400px] object-contain"
+          className={bannerSizeClasses[bannerSize]}
         />
       );
     }
@@ -213,11 +234,14 @@ export function PresenterMode({
     );
   };
 
+  // Check if banner is full width for layout purposes
+  const isFullWidthBanner = branding.eventBannerUrl && branding.bannerSize === 'fullWidth';
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-4">
+      <div className={`flex items-center justify-between p-4 border-b ${isFullWidthBanner ? 'flex-col gap-4' : ''}`}>
+        <div className={`flex items-center gap-4 ${isFullWidthBanner ? 'w-full' : ''}`}>
           {renderHeader()}
         </div>
         <div className="flex items-center gap-4">
@@ -323,7 +347,7 @@ export function PresenterMode({
             )}
             {currentPrize && (
               <div className="bg-accent/20 rounded-xl py-4 px-8 inline-block">
-                <PrizeDisplay prize={currentPrize} size="lg" />
+                <PrizeDisplay prize={currentPrize} size={prizeDisplaySize} />
               </div>
             )}
           </div>

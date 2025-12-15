@@ -62,9 +62,11 @@ export default function Index() {
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [showLockDialog, setShowLockDialog] = useState(false);
 
-  // Branding state (now just event banner per-draw)
+  // Branding state (event banner per-draw with display settings)
   const [branding, setBranding] = useState<BrandingConfig>({
     eventBannerUrl: null,
+    bannerSize: 'large',
+    prizeImageSize: 'large',
   });
 
   // Prizes state

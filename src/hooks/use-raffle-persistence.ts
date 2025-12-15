@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Participant, Winner, RaffleConfig } from '@/types/raffle';
 import { toast } from '@/hooks/use-toast';
 import { Json } from '@/integrations/supabase/types';
-import { BrandingConfig } from '@/components/raffle/BrandingPanel';
+import { BrandingConfig, BannerSize, PrizeImageSize } from '@/components/raffle/BrandingPanel';
 import { PrizeConfig } from '@/types/prizes';
 
 export interface SavedDraw {
@@ -42,10 +42,14 @@ export function useRafflePersistence() {
       if (existing) {
         // Update existing draw
         drawUuid = existing.id;
+        const configWithBranding = {
+          ...config,
+          branding: { bannerSize: branding.bannerSize, prizeImageSize: branding.prizeImageSize }
+        };
         const { error: updateError } = await supabase
           .from('raffle_draws')
           .update({
-            config: config as unknown as Json,
+            config: configWithBranding as unknown as Json,
             is_locked: isLocked,
             event_banner_url: branding.eventBannerUrl,
             prizes: prizes as unknown as Json,
@@ -61,13 +65,17 @@ export function useRafflePersistence() {
           .eq('raffle_draw_id', drawUuid);
       } else {
         // Insert new draw
+        const configWithBranding = {
+          ...config,
+          branding: { bannerSize: branding.bannerSize, prizeImageSize: branding.prizeImageSize }
+        };
         const { data: newDraw, error: insertError } = await supabase
           .from('raffle_draws')
           .insert({
             draw_id: drawId,
             dataset_checksum: datasetChecksum,
             seed,
-            config: config as unknown as Json,
+            config: configWithBranding as unknown as Json,
             total_participants: participants.length,
             total_tickets: participants.reduce((sum, p) => sum + p.entries, 0),
             participants: participants as unknown as Json,
@@ -192,6 +200,10 @@ export function useRafflePersistence() {
         };
       });
 
+      // Extract branding settings from config (stored alongside config for backward compat)
+      const configData = draw.config as Record<string, unknown>;
+      const storedBranding = configData?.branding as Record<string, unknown> | undefined;
+
       return {
         participants,
         winners,
@@ -202,6 +214,8 @@ export function useRafflePersistence() {
         isLocked: draw.is_locked,
         branding: {
           eventBannerUrl: draw.event_banner_url || null,
+          bannerSize: (storedBranding?.bannerSize as BannerSize) || 'large',
+          prizeImageSize: (storedBranding?.prizeImageSize as PrizeImageSize) || 'large',
         },
         prizes: draw.prizes as unknown as PrizeConfig | null,
       };
