@@ -14,16 +14,19 @@ const ROW_HEIGHT = 80;
 const VISIBLE_ROWS = 5;
 const CENTER_ROW = 2; // 0-indexed, middle of 5 visible rows
 
-// Custom easing with dramatic slowdown - fast start, very slow crawl at end
-const dramaticEase = (t: number): number => {
-  // Use a combination: fast through 80%, then crawl the last 20%
-  if (t < 0.8) {
-    // Cover 90% of distance in first 80% of time (fast)
-    return 0.9 * (t / 0.8);
+// 3-phase easing: fast blur -> readable medium -> slow suspenseful crawl
+const smoothDramaticEase = (t: number): number => {
+  if (t < 0.5) {
+    // Phase 1: Fast - cover 60% distance in first 50% of time (~9 names/sec blur)
+    return 0.6 * (t / 0.5);
+  } else if (t < 0.8) {
+    // Phase 2: Medium - cover 30% distance in next 30% of time (readable glimpses)
+    const mediumProgress = (t - 0.5) / 0.3;
+    return 0.6 + 0.3 * mediumProgress;
   } else {
-    // Cover remaining 10% of distance in last 20% of time (slow crawl)
-    const crawlProgress = (t - 0.8) / 0.2;
-    return 0.9 + 0.1 * (1 - Math.pow(1 - crawlProgress, 3));
+    // Phase 3: Slow crawl - cover 10% distance in final 20% of time (very readable)
+    const slowProgress = (t - 0.8) / 0.2;
+    return 0.9 + 0.1 * (1 - Math.pow(1 - slowProgress, 4));
   }
 };
 
@@ -56,7 +59,7 @@ export function SlotAnimation({
       .sort(() => Math.random() - 0.5);
 
     // Determine minimum names needed for smooth scrolling
-    const minNames = Math.max(60, participantList.length * 2);
+    const minNames = Math.max(45, participantList.length * 2);
     
     // Build the list, repeating shuffled names only if needed
     let names: string[] = [];
@@ -110,15 +113,15 @@ export function SlotAnimation({
       const targetOffset = winnerPos * ROW_HEIGHT;
       
       // Animation parameters
-      const animationDuration = 4000; // 4 seconds total
+      const animationDuration = 6000; // 6 seconds total
       const startTime = performance.now();
 
       const animate = (currentTime: number) => {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / animationDuration, 1);
         
-        // Apply dramatic easing for suspenseful slowdown
-        const easedProgress = dramaticEase(progress);
+        // Apply 3-phase easing for smooth, readable slowdown
+        const easedProgress = smoothDramaticEase(progress);
         
         // Calculate current scroll position
         const currentOffset = easedProgress * targetOffset;
