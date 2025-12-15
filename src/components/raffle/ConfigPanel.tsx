@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RaffleConfig } from '@/types/raffle';
+import { AnimationPreview } from './AnimationPreview';
 
 interface ConfigPanelProps {
   config: RaffleConfig;
@@ -81,6 +82,9 @@ export function ConfigPanel({ config, onConfigChange, maxWinners }: ConfigPanelP
             </SelectContent>
           </Select>
         </div>
+
+        {/* Animation Preview */}
+        <AnimationPreview animationStyle={config.animationStyle} />
 
         {/* Reveal Mode */}
         <div className="space-y-2">
