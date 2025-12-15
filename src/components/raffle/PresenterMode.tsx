@@ -5,6 +5,8 @@ import { SlotAnimation } from './SlotAnimation';
 import { WheelAnimation } from './WheelAnimation';
 import { Participant, Winner, RaffleConfig } from '@/types/raffle';
 import { BrandingConfig } from './BrandingPanel';
+import { useSoundEffects } from '@/hooks/use-sound-effects';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import confetti from 'canvas-confetti';
 
 interface PresenterModeProps {
@@ -35,17 +37,20 @@ export function PresenterMode({
   isComplete,
 }: PresenterModeProps) {
   const [showingResult, setShowingResult] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  const { playDrumroll, playWinnerReveal, playBonusPrize, playComplete } = useSoundEffects(config.soundEnabled);
 
   const isBonusPrize = config.bonusRoundInterval > 0 && 
     drawNumber > 0 && 
     drawNumber % config.bonusRoundInterval === 0;
 
   const triggerConfetti = useCallback(() => {
+    // Skip confetti if user prefers reduced motion
+    if (prefersReducedMotion) return;
+    
     const duration = 3000;
     const animationEnd = Date.now() + duration;
     const colors = ['#a855f7', '#ec4899', '#3b82f6', '#22c55e', '#f59e0b'];
-
-    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
     const frame = () => {
       confetti({
@@ -81,18 +86,27 @@ export function PresenterMode({
         });
       }, 500);
     }
-  }, [isBonusPrize]);
+  }, [isBonusPrize, prefersReducedMotion]);
 
   const handleSpinComplete = useCallback(() => {
     setShowingResult(true);
     triggerConfetti();
+    
+    // Play appropriate sound
+    if (isBonusPrize) {
+      playBonusPrize();
+    } else {
+      playWinnerReveal();
+    }
+    
     onSpinComplete();
-  }, [onSpinComplete, triggerConfetti]);
+  }, [onSpinComplete, triggerConfetti, isBonusPrize, playBonusPrize, playWinnerReveal]);
 
   const handleDrawNext = useCallback(() => {
     setShowingResult(false);
+    playDrumroll();
     onDrawNext();
-  }, [onDrawNext]);
+  }, [onDrawNext, playDrumroll]);
 
   // Keyboard controls
   useEffect(() => {
@@ -112,6 +126,13 @@ export function PresenterMode({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDrawing, isComplete, showingResult, handleDrawNext, onExit, currentWinner]);
+
+  // Play completion sound when all winners are drawn
+  useEffect(() => {
+    if (isComplete && winners.length > 0) {
+      playComplete();
+    }
+  }, [isComplete, winners.length, playComplete]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
