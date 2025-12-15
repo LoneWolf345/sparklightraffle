@@ -46,6 +46,7 @@ export type Database = {
           is_locked: boolean
           logo_url: string | null
           participants: Json
+          prizes: Json | null
           seed: string
           total_participants: number
           total_tickets: number
@@ -61,6 +62,7 @@ export type Database = {
           is_locked?: boolean
           logo_url?: string | null
           participants: Json
+          prizes?: Json | null
           seed: string
           total_participants: number
           total_tickets: number
@@ -76,6 +78,7 @@ export type Database = {
           is_locked?: boolean
           logo_url?: string | null
           participants?: Json
+          prizes?: Json | null
           seed?: string
           total_participants?: number
           total_tickets?: number
