@@ -11,6 +11,7 @@ import { AuditPanel } from '@/components/raffle/AuditPanel';
 import { ParticipantsPanel } from '@/components/raffle/ParticipantsPanel';
 import { PriorDrawsPanel } from '@/components/raffle/PriorDrawsPanel';
 import { PresenterMode } from '@/components/raffle/PresenterMode';
+import { BrandingPanel, BrandingConfig } from '@/components/raffle/BrandingPanel';
 import { Participant, Winner, RaffleConfig, ImportSummary, AuditLog } from '@/types/raffle';
 import { weightedRandomSelect, generateSeed, generateDrawId, createAuditLog, calculateChecksum } from '@/lib/raffle';
 import { useRafflePersistence } from '@/hooks/use-raffle-persistence';
@@ -47,6 +48,13 @@ export default function Index() {
   // Dialog state
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [showLockDialog, setShowLockDialog] = useState(false);
+
+  // Branding state
+  const [branding, setBranding] = useState<BrandingConfig>({
+    logoUrl: null,
+    eventBannerUrl: null,
+    useEventBanner: false,
+  });
 
   // Persistence
   const { saveDraw, loadDraw } = useRafflePersistence();
@@ -294,6 +302,7 @@ export default function Index() {
         participants={participants}
         winners={winners}
         config={config}
+        branding={branding}
         currentWinner={currentWinner}
         isDrawing={isDrawing}
         drawNumber={drawNumber}
@@ -366,11 +375,17 @@ export default function Index() {
                 onImport={handleImport} 
                 hasData={participants.length > 0} 
               />
-              <ConfigPanel
-                config={config}
-                onConfigChange={setConfig}
-                maxWinners={config.allowRepeats ? 999 : participants.length}
-              />
+              <div className="space-y-6">
+                <ConfigPanel
+                  config={config}
+                  onConfigChange={setConfig}
+                  maxWinners={config.allowRepeats ? 999 : participants.length}
+                />
+                <BrandingPanel
+                  branding={branding}
+                  onBrandingChange={setBranding}
+                />
+              </div>
             </div>
 
             {/* Quick Start Card */}

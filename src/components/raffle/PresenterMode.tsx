@@ -1,15 +1,17 @@
 import { useEffect, useCallback, useState } from 'react';
-import { X, ChevronRight, SkipForward, Trophy } from 'lucide-react';
+import { X, ChevronRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SlotAnimation } from './SlotAnimation';
 import { WheelAnimation } from './WheelAnimation';
 import { Participant, Winner, RaffleConfig } from '@/types/raffle';
+import { BrandingConfig } from './BrandingPanel';
 import confetti from 'canvas-confetti';
 
 interface PresenterModeProps {
   participants: Participant[];
   winners: Winner[];
   config: RaffleConfig;
+  branding: BrandingConfig;
   currentWinner: Participant | null;
   isDrawing: boolean;
   drawNumber: number;
@@ -23,6 +25,7 @@ export function PresenterMode({
   participants,
   winners,
   config,
+  branding,
   currentWinner,
   isDrawing,
   drawNumber,
@@ -115,7 +118,21 @@ export function PresenterMode({
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-4">
-          <Trophy className="h-8 w-8 text-primary" />
+          {branding.useEventBanner && branding.eventBannerUrl ? (
+            <img
+              src={branding.eventBannerUrl}
+              alt="Event banner"
+              className="h-12 max-w-[300px] object-contain"
+            />
+          ) : branding.logoUrl ? (
+            <img
+              src={branding.logoUrl}
+              alt="Company logo"
+              className="h-12 max-w-[200px] object-contain"
+            />
+          ) : (
+            <Trophy className="h-8 w-8 text-primary" />
+          )}
           <div>
             <h1 className="text-2xl font-bold">Sparklight Virtual Raffle</h1>
             <p className="text-sm text-muted-foreground">
