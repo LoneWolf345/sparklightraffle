@@ -1,0 +1,222 @@
+import { useEffect, useCallback, useState } from 'react';
+import { X, ChevronRight, SkipForward, Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { SlotAnimation } from './SlotAnimation';
+import { WheelAnimation } from './WheelAnimation';
+import { Participant, Winner, RaffleConfig } from '@/types/raffle';
+import confetti from 'canvas-confetti';
+
+interface PresenterModeProps {
+  participants: Participant[];
+  winners: Winner[];
+  config: RaffleConfig;
+  currentWinner: Participant | null;
+  isDrawing: boolean;
+  drawNumber: number;
+  onDrawNext: () => void;
+  onSpinComplete: () => void;
+  onExit: () => void;
+  isComplete: boolean;
+}
+
+export function PresenterMode({
+  participants,
+  winners,
+  config,
+  currentWinner,
+  isDrawing,
+  drawNumber,
+  onDrawNext,
+  onSpinComplete,
+  onExit,
+  isComplete,
+}: PresenterModeProps) {
+  const [showingResult, setShowingResult] = useState(false);
+
+  const isBonusPrize = config.bonusRoundInterval > 0 && 
+    drawNumber > 0 && 
+    drawNumber % config.bonusRoundInterval === 0;
+
+  const triggerConfetti = useCallback(() => {
+    const duration = 3000;
+    const animationEnd = Date.now() + duration;
+    const colors = ['#a855f7', '#ec4899', '#3b82f6', '#22c55e', '#f59e0b'];
+
+    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+    const frame = () => {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors,
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors,
+      });
+
+      if (Date.now() < animationEnd) {
+        requestAnimationFrame(frame);
+      }
+    };
+
+    frame();
+
+    if (isBonusPrize) {
+      // Extra confetti for bonus prizes
+      setTimeout(() => {
+        confetti({
+          particleCount: 100,
+          spread: 100,
+          origin: { y: 0.6 },
+          colors,
+        });
+      }, 500);
+    }
+  }, [isBonusPrize]);
+
+  const handleSpinComplete = useCallback(() => {
+    setShowingResult(true);
+    triggerConfetti();
+    onSpinComplete();
+  }, [onSpinComplete, triggerConfetti]);
+
+  const handleDrawNext = useCallback(() => {
+    setShowingResult(false);
+    onDrawNext();
+  }, [onDrawNext]);
+
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onExit();
+      } else if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        if (!isDrawing && !isComplete && currentWinner === null) {
+          handleDrawNext();
+        } else if (showingResult && !isComplete) {
+          handleDrawNext();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDrawing, isComplete, showingResult, handleDrawNext, onExit, currentWinner]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-4">
+          <Trophy className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Sparklight Virtual Raffle</h1>
+            <p className="text-sm text-muted-foreground">
+              Drawing {drawNumber} of {config.numberOfWinners}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <div className="text-sm text-muted-foreground">Winners Drawn</div>
+            <div className="text-2xl font-bold">{winners.length}</div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onExit}>
+            <X className="h-6 w-6" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
+        {isComplete ? (
+          <div className="text-center space-y-6 animate-fade-in">
+            <Trophy className="h-24 w-24 mx-auto text-primary" />
+            <h2 className="text-5xl font-bold">All Winners Selected!</h2>
+            <p className="text-xl text-muted-foreground">
+              {winners.length} winners have been drawn
+            </p>
+            <Button size="lg" onClick={onExit} className="mt-8">
+              View Results
+            </Button>
+          </div>
+        ) : isDrawing || currentWinner ? (
+          config.animationStyle === 'slot' ? (
+            <SlotAnimation
+              participants={participants}
+              winner={currentWinner}
+              isSpinning={isDrawing}
+              onSpinComplete={handleSpinComplete}
+              isBonusPrize={isBonusPrize}
+            />
+          ) : (
+            <WheelAnimation
+              participants={participants}
+              winner={currentWinner}
+              isSpinning={isDrawing}
+              onSpinComplete={handleSpinComplete}
+              isBonusPrize={isBonusPrize}
+            />
+          )
+        ) : (
+          <div className="text-center space-y-6">
+            <div className="text-6xl font-bold text-primary">
+              {drawNumber === 0 ? 'Ready to Draw!' : `Winner #${drawNumber + 1}`}
+            </div>
+            <p className="text-xl text-muted-foreground">
+              Press Space or click the button below to reveal
+            </p>
+          </div>
+        )}
+
+        {/* Winner Info */}
+        {showingResult && currentWinner && config.showEmail && (
+          <div className="mt-4 text-xl text-muted-foreground animate-fade-in">
+            {currentWinner.email}
+          </div>
+        )}
+      </div>
+
+      {/* Footer Controls */}
+      <div className="p-6 border-t flex justify-center gap-4">
+        {!isComplete && !isDrawing && (
+          <Button 
+            size="lg" 
+            onClick={handleDrawNext}
+            className="text-lg px-8 py-6"
+          >
+            {drawNumber === 0 ? (
+              <>
+                Start Drawing
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </>
+            ) : showingResult ? (
+              <>
+                Next Winner
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </>
+            ) : (
+              <>
+                Draw Winner #{drawNumber + 1}
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </>
+            )}
+          </Button>
+        )}
+      </div>
+
+      {/* Keyboard hint */}
+      <div className="absolute bottom-4 left-4 text-sm text-muted-foreground">
+        Press <kbd className="px-2 py-1 bg-muted rounded text-xs">Space</kbd> for next • 
+        <kbd className="px-2 py-1 bg-muted rounded text-xs ml-2">Esc</kbd> to exit
+      </div>
+    </div>
+  );
+}
