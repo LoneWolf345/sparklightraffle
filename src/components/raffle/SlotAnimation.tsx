@@ -10,6 +10,15 @@ interface SlotAnimationProps {
   isBonusPrize?: boolean;
 }
 
+const ROW_HEIGHT = 80;
+const VISIBLE_ROWS = 5;
+const CENTER_ROW = 2; // 0-indexed, middle of 5 visible rows
+
+// Exponential ease-out for dramatic slowdown
+const easeOutExpo = (t: number): number => {
+  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+};
+
 export function SlotAnimation({ 
   participants, 
   winner, 
@@ -18,40 +27,67 @@ export function SlotAnimation({
   isBonusPrize 
 }: SlotAnimationProps) {
   const prefersReducedMotion = useReducedMotion();
-  const intervalRef = useRef<number | null>(null);
+  const animationRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
-  const maxIterations = 40;
-  const finalStopIndex = maxIterations % 20; // Pre-calculate where animation will stop
-
-  // Generate random display names with winner pre-positioned at final stop
-  const generateNamesWithWinner = useCallback((winnerToPlace: Participant | null) => {
-    if (participants.length === 0) return Array(20).fill('Loading...');
-    const names: string[] = [];
-    for (let i = 0; i < 20; i++) {
-      if (i === finalStopIndex && winnerToPlace) {
-        // Place winner at the exact position where animation will stop
-        names.push(winnerToPlace.name);
-      } else {
-        const randomParticipant = participants[Math.floor(Math.random() * participants.length)];
-        names.push(randomParticipant?.name || 'Loading...');
-      }
-    }
-    return names;
-  }, [participants, finalStopIndex]);
-
-  // Initialize with random names (winner will be placed when spinning starts)
-  const [displayNames, setDisplayNames] = useState<string[]>(() => generateNamesWithWinner(null));
-  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const [displayNames, setDisplayNames] = useState<string[]>([]);
+  const [winnerPosition, setWinnerPosition] = useState(0);
   const [animationComplete, setAnimationComplete] = useState(false);
 
+  // Build the scroll list with shuffled participants and winner at calculated position
+  const buildScrollList = useCallback((participantList: Participant[], winnerParticipant: Participant | null) => {
+    if (participantList.length === 0 || !winnerParticipant) {
+      return { names: [], winnerPos: 0 };
+    }
+
+    // Shuffle all participants (excluding winner to place them manually)
+    const othersShuffled = participantList
+      .filter(p => p.name !== winnerParticipant.name || p.email !== winnerParticipant.email)
+      .sort(() => Math.random() - 0.5);
+
+    // Determine minimum names needed for smooth scrolling
+    const minNames = Math.max(60, participantList.length * 2);
+    
+    // Build the list, repeating shuffled names only if needed
+    let names: string[] = [];
+    while (names.length < minNames) {
+      // Add shuffled participants
+      for (const p of othersShuffled) {
+        if (names.length < minNames) {
+          names.push(p.name);
+        }
+      }
+      // If we still need more and don't have enough participants, repeat
+      if (names.length < minNames && othersShuffled.length < minNames) {
+        continue;
+      }
+    }
+
+    // Calculate winner position - place them near the end so scroll is substantial
+    // Winner should end up in the center row when scrolling stops
+    const winnerPos = names.length - CENTER_ROW - 1;
+    
+    // Insert winner at the calculated position
+    names.splice(winnerPos, 0, winnerParticipant.name);
+
+    return { names, winnerPos };
+  }, []);
+
   useEffect(() => {
-    if (isSpinning && participants.length > 0) {
-      // Reset animation complete state when starting a new spin
+    if (isSpinning && participants.length > 0 && winner) {
+      // Reset state
       setAnimationComplete(false);
-      setCurrentIndex(0);
-      
-      // If user prefers reduced motion, skip animation and reveal immediately
+      setScrollOffset(0);
+
+      // Build the scroll list with winner positioned
+      const { names, winnerPos } = buildScrollList(participants, winner);
+      setDisplayNames(names);
+      setWinnerPosition(winnerPos);
+
+      // If user prefers reduced motion, skip animation
       if (prefersReducedMotion) {
+        setScrollOffset(winnerPos * ROW_HEIGHT);
         setAnimationComplete(true);
         timeoutRef.current = window.setTimeout(() => {
           onSpinComplete();
@@ -59,52 +95,46 @@ export function SlotAnimation({
         return;
       }
 
-      // Generate names with winner pre-positioned at the final stop index
-      setDisplayNames(generateNamesWithWinner(winner));
+      // Calculate the target scroll position (winner in center)
+      const targetOffset = winnerPos * ROW_HEIGHT;
       
-      // Start fast cycling
-      let speed = 50;
-      let iterations = 0;
+      // Animation parameters
+      const animationDuration = 4000; // 4 seconds total
+      const startTime = performance.now();
 
-      const cycle = () => {
-        iterations++;
-        setCurrentIndex(prev => (prev + 1) % 20);
+      const animate = (currentTime: number) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / animationDuration, 1);
         
-        // Gradually slow down after 60% of iterations
-        if (iterations > maxIterations * 0.6) {
-          speed = Math.min(speed + 15, 300);
-        }
+        // Apply easing for dramatic slowdown
+        const easedProgress = easeOutExpo(progress);
         
-        if (iterations < maxIterations) {
-          intervalRef.current = window.setTimeout(cycle, speed);
+        // Calculate current scroll position
+        const currentOffset = easedProgress * targetOffset;
+        setScrollOffset(currentOffset);
+
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animate);
         } else {
-          // Animation naturally lands on winner (already in position)
-          // Add a brief pause before showing the celebration screen
+          // Ensure we land exactly on the winner
+          setScrollOffset(targetOffset);
           setAnimationComplete(true);
+          
+          // Brief pause before celebration
           timeoutRef.current = window.setTimeout(() => {
             onSpinComplete();
           }, 800);
         }
       };
 
-      cycle();
+      animationRef.current = requestAnimationFrame(animate);
     }
 
     return () => {
-      if (intervalRef.current) clearTimeout(intervalRef.current);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [isSpinning, participants, winner, generateNamesWithWinner, onSpinComplete, prefersReducedMotion, maxIterations]);
-
-  const visibleNames = displayNames.slice(
-    Math.max(0, currentIndex - 2),
-    currentIndex + 3
-  );
-
-  // Pad if needed
-  while (visibleNames.length < 5) {
-    visibleNames.push(displayNames[visibleNames.length % displayNames.length] || '...');
-  }
+  }, [isSpinning, participants, winner, buildScrollList, onSpinComplete, prefersReducedMotion]);
 
   // Show winner when animation is complete
   if (animationComplete && winner) {
@@ -122,6 +152,16 @@ export function SlotAnimation({
     );
   }
 
+  // Calculate which names are visible based on scroll offset
+  const firstVisibleIndex = Math.floor(scrollOffset / ROW_HEIGHT);
+  const offsetWithinRow = scrollOffset % ROW_HEIGHT;
+
+  // Get visible names with some buffer
+  const visibleNames = displayNames.slice(
+    Math.max(0, firstVisibleIndex - 1),
+    firstVisibleIndex + VISIBLE_ROWS + 2
+  );
+
   return (
     <div className="relative h-[400px] w-full max-w-4xl mx-auto overflow-hidden">
       {/* Gradient overlays */}
@@ -129,27 +169,33 @@ export function SlotAnimation({
       <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent z-10" />
       
       {/* Center highlight */}
-      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-24 bg-primary/10 border-y-2 border-primary z-5" />
+      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-20 bg-primary/10 border-y-2 border-primary z-5" />
       
       {/* Scrolling names */}
       <div 
-        className="absolute inset-x-0 transition-transform duration-100 z-20"
+        className="absolute inset-x-0 z-20"
         style={{ 
-          transform: `translateY(${-currentIndex * 80 + 160}px)`,
+          transform: `translateY(${(CENTER_ROW * ROW_HEIGHT) - offsetWithinRow - ((firstVisibleIndex - Math.max(0, firstVisibleIndex - 1)) * ROW_HEIGHT)}px)`,
         }}
       >
-        {displayNames.map((name, index) => (
-          <div
-            key={index}
-            className={`
-              h-20 flex items-center justify-center text-4xl md:text-5xl font-bold
-              transition-all duration-100
-              ${index === currentIndex ? 'text-primary scale-110' : 'text-muted-foreground/40 scale-90'}
-            `}
-          >
-            {name}
-          </div>
-        ))}
+        {visibleNames.map((name, index) => {
+          const actualIndex = Math.max(0, firstVisibleIndex - 1) + index;
+          const isCenter = actualIndex === Math.floor(scrollOffset / ROW_HEIGHT) + CENTER_ROW ||
+                          (actualIndex === winnerPosition && animationComplete);
+          
+          return (
+            <div
+              key={`${actualIndex}-${name}`}
+              className={`
+                h-20 flex items-center justify-center text-4xl md:text-5xl font-bold
+                transition-all duration-75
+                ${isCenter ? 'text-primary scale-110' : 'text-muted-foreground/40 scale-90'}
+              `}
+            >
+              {name}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
