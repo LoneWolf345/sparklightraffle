@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { Trophy, Play, Users, Ticket, AlertTriangle, RotateCcw } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Trophy, Play, Users, Ticket, AlertTriangle, RotateCcw, LogIn, LogOut, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,6 +16,8 @@ import { BrandingPanel, BrandingConfig } from '@/components/raffle/BrandingPanel
 import { Participant, Winner, RaffleConfig, ImportSummary, AuditLog } from '@/types/raffle';
 import { weightedRandomSelect, generateSeed, generateDrawId, createAuditLog, calculateChecksum } from '@/lib/raffle';
 import { useRafflePersistence } from '@/hooks/use-raffle-persistence';
+import { useAuth } from '@/hooks/use-auth';
+import { maskWinners, maskParticipants } from '@/lib/privacy';
 import { toast } from '@/hooks/use-toast';
 
 const defaultConfig: RaffleConfig = {
@@ -28,6 +31,9 @@ const defaultConfig: RaffleConfig = {
 };
 
 export default function Index() {
+  const navigate = useNavigate();
+  const { user, isAdmin, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
+  
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [config, setConfig] = useState<RaffleConfig>(defaultConfig);
@@ -60,11 +66,22 @@ export default function Index() {
   const { saveDraw, loadDraw } = useRafflePersistence();
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Privacy-filtered data for non-authenticated users
+  const displayWinners = useMemo(() => {
+    if (isAuthenticated) return winners;
+    return maskWinners(winners, true); // Hide entries for guests
+  }, [winners, isAuthenticated]);
+
+  const displayParticipants = useMemo(() => {
+    if (isAuthenticated) return participants;
+    return maskParticipants(participants, true); // Hide entries for guests
+  }, [participants, isAuthenticated]);
+
   const totalTickets = participants.reduce((sum, p) => sum + p.entries, 0);
 
-  // Auto-save effect
+  // Auto-save effect - only for admins
   useEffect(() => {
-    if (!drawId || participants.length === 0) return;
+    if (!isAdmin || !drawId || participants.length === 0) return;
     
     // Debounce saves
     if (saveTimeoutRef.current) {
@@ -79,7 +96,7 @@ export default function Index() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding, saveDraw]);
+  }, [isAdmin, drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding, saveDraw]);
 
   const handleLoadDraw = useCallback(async (id: string) => {
     const data = await loadDraw(id);
@@ -315,6 +332,14 @@ export default function Index() {
     );
   }
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -333,113 +358,199 @@ export default function Index() {
               </div>
             </div>
             
-            {participants.length > 0 && (
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{participants.length}</span>
-                  <span className="text-muted-foreground">participants</span>
+            <div className="flex items-center gap-4">
+              {/* Auth status and controls */}
+              {isAuthenticated ? (
+                <div className="flex items-center gap-3">
+                  {isAdmin && (
+                    <span className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                      <Shield className="h-3 w-3" />
+                      Admin
+                    </span>
+                  )}
+                  <span className="text-sm text-muted-foreground hidden md:inline">
+                    {user?.email}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => signOut()}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </Button>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Ticket className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{totalTickets.toLocaleString()}</span>
-                  <span className="text-muted-foreground">tickets</span>
-                </div>
-                <Button onClick={startPresenterMode} disabled={isLocked}>
-                  <Play className="h-4 w-4 mr-2" />
-                  {winners.length > 0 ? 'Continue Drawing' : 'Start Raffle'}
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Sign In
                 </Button>
-              </div>
-            )}
+              )}
+              
+              {/* Raffle stats and start button - only show stats to authenticated, start to admin */}
+              {participants.length > 0 && (
+                <div className="flex items-center gap-6">
+                  {isAuthenticated && (
+                    <>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{participants.length}</span>
+                        <span className="text-muted-foreground">participants</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Ticket className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{totalTickets.toLocaleString()}</span>
+                        <span className="text-muted-foreground">tickets</span>
+                      </div>
+                    </>
+                  )}
+                  {isAdmin && (
+                    <Button onClick={startPresenterMode} disabled={isLocked}>
+                      <Play className="h-4 w-4 mr-2" />
+                      {winners.length > 0 ? 'Continue Drawing' : 'Start Raffle'}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="setup" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-5">
-            <TabsTrigger value="setup">Setup</TabsTrigger>
-            <TabsTrigger value="participants">
-              Participants {participants.length > 0 && `(${participants.length})`}
-            </TabsTrigger>
-            <TabsTrigger value="winners">
-              Winners {winners.length > 0 && `(${winners.length})`}
-            </TabsTrigger>
-            <TabsTrigger value="audit">Audit</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-          </TabsList>
+        {/* Admin view with all tabs */}
+        {isAdmin ? (
+          <Tabs defaultValue="setup" className="space-y-6">
+            <TabsList className="grid w-full max-w-2xl grid-cols-5">
+              <TabsTrigger value="setup">Setup</TabsTrigger>
+              <TabsTrigger value="participants">
+                Participants {participants.length > 0 && `(${participants.length})`}
+              </TabsTrigger>
+              <TabsTrigger value="winners">
+                Winners {winners.length > 0 && `(${winners.length})`}
+              </TabsTrigger>
+              <TabsTrigger value="audit">Audit</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="setup" className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <ImportPanel 
-                onImport={handleImport} 
-                hasData={participants.length > 0} 
-              />
-              <div className="space-y-6">
-                <ConfigPanel
-                  config={config}
-                  onConfigChange={setConfig}
-                  maxWinners={config.allowRepeats ? 999 : participants.length}
+            <TabsContent value="setup" className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <ImportPanel 
+                  onImport={handleImport} 
+                  hasData={participants.length > 0} 
                 />
-                <BrandingPanel
-                  branding={branding}
-                  onBrandingChange={setBranding}
-                />
+                <div className="space-y-6">
+                  <ConfigPanel
+                    config={config}
+                    onConfigChange={setConfig}
+                    maxWinners={config.allowRepeats ? 999 : participants.length}
+                  />
+                  <BrandingPanel
+                    branding={branding}
+                    onBrandingChange={setBranding}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Quick Start Card */}
-            {participants.length > 0 && winners.length === 0 && (
-              <Card className="border-primary/50 bg-primary/5">
-                <CardContent className="pt-6">
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-semibold text-lg">Ready to Draw!</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {participants.length} participants with {totalTickets.toLocaleString()} total tickets loaded
-                      </p>
+              {/* Quick Start Card */}
+              {participants.length > 0 && winners.length === 0 && (
+                <Card className="border-primary/50 bg-primary/5">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                      <div>
+                        <h3 className="font-semibold text-lg">Ready to Draw!</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {participants.length} participants with {totalTickets.toLocaleString()} total tickets loaded
+                        </p>
+                      </div>
+                      <Button size="lg" onClick={startPresenterMode}>
+                        <Play className="h-5 w-5 mr-2" />
+                        Enter Presenter Mode
+                      </Button>
                     </div>
-                    <Button size="lg" onClick={startPresenterMode}>
-                      <Play className="h-5 w-5 mr-2" />
-                      Enter Presenter Mode
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
-          <TabsContent value="participants">
-            <ParticipantsPanel participants={participants} />
-          </TabsContent>
+            <TabsContent value="participants">
+              <ParticipantsPanel participants={participants} />
+            </TabsContent>
 
-          <TabsContent value="winners" className="space-y-4">
-            {winners.length > 0 && (
-              <div className="flex justify-end">
-                <Button variant="outline" onClick={startReplayMode}>
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Replay Presentation
-                </Button>
-              </div>
-            )}
-            <WinnersPanel
-              winners={winners}
-              isLocked={isLocked}
-              onUndo={handleUndo}
-              onRestart={() => setShowRestartDialog(true)}
-              onLock={() => setShowLockDialog(true)}
-            />
-          </TabsContent>
+            <TabsContent value="winners" className="space-y-4">
+              {winners.length > 0 && (
+                <div className="flex justify-end">
+                  <Button variant="outline" onClick={startReplayMode}>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Replay Presentation
+                  </Button>
+                </div>
+              )}
+              <WinnersPanel
+                winners={winners}
+                isLocked={isLocked}
+                onUndo={handleUndo}
+                onRestart={() => setShowRestartDialog(true)}
+                onLock={() => setShowLockDialog(true)}
+              />
+            </TabsContent>
 
-          <TabsContent value="audit">
-            <AuditPanel auditLog={auditLog} />
-          </TabsContent>
+            <TabsContent value="audit">
+              <AuditPanel auditLog={auditLog} />
+            </TabsContent>
 
-          <TabsContent value="history">
-            <PriorDrawsPanel onLoadDraw={handleLoadDraw} />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="history">
+              <PriorDrawsPanel onLoadDraw={handleLoadDraw} />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          /* Non-admin view: winners and history only */
+          <Tabs defaultValue="winners" className="space-y-6">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="winners">
+                Winners {displayWinners.length > 0 && `(${displayWinners.length})`}
+              </TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="winners" className="space-y-4">
+              {displayWinners.length > 0 && isAuthenticated && (
+                <div className="flex justify-end">
+                  <Button variant="outline" onClick={startReplayMode}>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Replay Presentation
+                  </Button>
+                </div>
+              )}
+              {displayWinners.length > 0 ? (
+                <WinnersPanel
+                  winners={displayWinners}
+                  isLocked={true}
+                  onUndo={() => {}}
+                  onRestart={() => {}}
+                  onLock={() => {}}
+                  readOnly
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Winners Yet</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Check back when the raffle has been drawn
+                    </p>
+                    {!isAuthenticated && (
+                      <p className="text-xs text-muted-foreground mt-4">
+                        Sign in with your work email to see full winner details
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="history">
+              <PriorDrawsPanel onLoadDraw={handleLoadDraw} />
+            </TabsContent>
+          </Tabs>
+        )}
       </main>
 
       {/* Restart Confirmation Dialog */}

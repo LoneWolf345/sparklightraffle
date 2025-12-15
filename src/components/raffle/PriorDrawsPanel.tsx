@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { SavedDraw, useRafflePersistence } from '@/hooks/use-raffle-persistence';
+import { useAuth } from '@/hooks/use-auth';
 import { format } from 'date-fns';
 
 interface PriorDrawsPanelProps {
@@ -13,6 +14,7 @@ interface PriorDrawsPanelProps {
 }
 
 export function PriorDrawsPanel({ onLoadDraw }: PriorDrawsPanelProps) {
+  const { isAdmin } = useAuth();
   const [draws, setDraws] = useState<SavedDraw[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -97,13 +99,15 @@ export function PriorDrawsPanel({ onLoadDraw }: PriorDrawsPanelProps) {
                         <Download className="h-4 w-4 mr-1" />
                         Load
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteId(draw.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteId(draw.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

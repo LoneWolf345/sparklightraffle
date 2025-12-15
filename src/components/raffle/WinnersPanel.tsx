@@ -13,6 +13,7 @@ interface WinnersPanelProps {
   onUndo: () => void;
   onRestart: () => void;
   onLock: () => void;
+  readOnly?: boolean;
 }
 
 export function WinnersPanel({ 
@@ -20,7 +21,8 @@ export function WinnersPanel({
   isLocked, 
   onUndo, 
   onRestart, 
-  onLock 
+  onLock,
+  readOnly = false
 }: WinnersPanelProps) {
   const handleCopyWinners = () => {
     const text = winners
@@ -97,7 +99,7 @@ export function WinnersPanel({
                 <TableHead className="w-16">#</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead className="w-20 text-right">Entries</TableHead>
+                {!readOnly && <TableHead className="w-20 text-right">Entries</TableHead>}
                 <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
@@ -119,9 +121,11 @@ export function WinnersPanel({
                   <TableCell className="text-muted-foreground">
                     {winner.participant.email}
                   </TableCell>
-                  <TableCell className="text-right">
-                    {winner.participant.entries}
-                  </TableCell>
+                  {!readOnly && (
+                    <TableCell className="text-right">
+                      {winner.participant.entries}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <span className="text-xs text-muted-foreground">
                       {new Date(winner.timestamp).toLocaleTimeString()}
@@ -133,8 +137,8 @@ export function WinnersPanel({
           </Table>
         </div>
 
-        {/* Controls */}
-        {!isLocked && (
+        {/* Controls - hidden for read-only mode */}
+        {!isLocked && !readOnly && (
           <div className="flex justify-between mt-4 pt-4 border-t">
             <Button 
               variant="outline" 
