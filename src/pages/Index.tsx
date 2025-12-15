@@ -507,6 +507,7 @@ export default function Index() {
                 onUndo={handleUndo}
                 onRestart={() => setShowRestartDialog(true)}
                 onLock={() => setShowLockDialog(true)}
+                prizes={prizes}
               />
             </TabsContent>
 
@@ -549,6 +550,7 @@ export default function Index() {
                   onRestart={() => {}}
                   onLock={() => {}}
                   readOnly
+                  prizes={prizes}
                 />
               ) : (
                 <Card>
