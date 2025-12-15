@@ -199,6 +199,9 @@ export default function Index() {
   }, [winners]);
 
   const handleDrawNext = useCallback(() => {
+    // Clear previous winner before starting new draw
+    setCurrentWinner(null);
+    
     // Replay mode logic
     if (isReplayMode) {
       if (replayIndex >= winners.length) return;
@@ -265,11 +268,10 @@ export default function Index() {
           name: currentWinner.name,
           email: currentWinner.email,
           entries: currentWinner.entries,
-          timestamp: new Date().toISOString(),
-        }],
-      } : null);
-
-      setCurrentWinner(null);
+        timestamp: new Date().toISOString(),
+      }],
+    } : null);
+    // Don't clear currentWinner here - let it persist until next draw
     }
   }, [currentWinner, drawNumber, config.bonusRoundInterval, isReplayMode, replayIndex]);
 
