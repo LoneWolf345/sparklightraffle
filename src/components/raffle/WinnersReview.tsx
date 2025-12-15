@@ -1,4 +1,4 @@
-import { Trophy, Users, Ticket, Copy, Download, Play, FileText, Gift, TrendingDown, TrendingUp, Lock, Undo2, RotateCcw, Star } from 'lucide-react';
+import { Trophy, Users, Ticket, Copy, Download, Play, FileText, Gift, TrendingDown, TrendingUp, Lock, Undo2, RotateCcw, Star, Target, Crown, UsersRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +49,59 @@ function calculateStats(winners: Winner[], participants: Participant[]): WinnerS
   return { underdog, topDog, avgWinnerEntries, avgOverallEntries };
 }
 
+interface TeamStats {
+  mostPotential: { team: string; tickets: number } | null;
+  topTeam: { team: string; winnerCount: number } | null;
+  totalTeams: number;
+}
+
+function calculateTeamStats(winners: Winner[], participants: Participant[]): TeamStats {
+  // Get unique teams from participants
+  const teams = new Set(participants.filter(p => p.team).map(p => p.team!));
+  
+  if (teams.size === 0) {
+    return { mostPotential: null, topTeam: null, totalTeams: 0 };
+  }
+  
+  // Calculate tickets per team
+  const ticketsByTeam = new Map<string, number>();
+  participants.forEach(p => {
+    if (p.team) {
+      ticketsByTeam.set(p.team, (ticketsByTeam.get(p.team) || 0) + p.entries);
+    }
+  });
+  
+  // Find team with most tickets (Most Potential)
+  let mostPotential: { team: string; tickets: number } | null = null;
+  ticketsByTeam.forEach((tickets, team) => {
+    if (!mostPotential || tickets > mostPotential.tickets) {
+      mostPotential = { team, tickets };
+    }
+  });
+  
+  // Calculate winners per team
+  const winnersByTeam = new Map<string, number>();
+  winners.forEach(w => {
+    if (w.participant.team) {
+      winnersByTeam.set(w.participant.team, (winnersByTeam.get(w.participant.team) || 0) + 1);
+    }
+  });
+  
+  // Find team with most winners (Top Team)
+  let topTeam: { team: string; winnerCount: number } | null = null;
+  winnersByTeam.forEach((count, team) => {
+    if (!topTeam || count > topTeam.winnerCount) {
+      topTeam = { team, winnerCount: count };
+    }
+  });
+  
+  return {
+    mostPotential,
+    topTeam,
+    totalTeams: teams.size
+  };
+}
+
 function calculateOdds(entries: number, totalTickets: number): string {
   if (totalTickets === 0) return '0';
   const odds = (entries / totalTickets) * 100;
@@ -90,6 +143,7 @@ export function WinnersReview({
 }: WinnersReviewProps) {
   const totalTickets = participants.reduce((sum, p) => sum + p.entries, 0);
   const stats = calculateStats(winners, participants);
+  const teamStats = calculateTeamStats(winners, participants);
   const uniquePrizes = getUniquePrizes(prizes, winners.length);
 
   const handleCopyWinners = () => {
@@ -249,6 +303,59 @@ export function WinnersReview({
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Team Statistics */}
+      {teamStats.totalTeams > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UsersRound className="h-5 w-5 text-primary" />
+              Team Statistics
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Most Potential */}
+              {teamStats.mostPotential && (
+                <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
+                    <Target className="h-5 w-5" />
+                    <span className="font-medium">Most Potential</span>
+                  </div>
+                  <p className="font-bold text-lg">{teamStats.mostPotential.team}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {teamStats.mostPotential.tickets.toLocaleString()} tickets
+                  </p>
+                </div>
+              )}
+              
+              {/* Top Team */}
+              {teamStats.topTeam && (
+                <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                  <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-2">
+                    <Crown className="h-5 w-5" />
+                    <span className="font-medium">Top Team</span>
+                  </div>
+                  <p className="font-bold text-lg">{teamStats.topTeam.team}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {teamStats.topTeam.winnerCount} winner{teamStats.topTeam.winnerCount !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              )}
+              
+              {/* Total Teams */}
+              <div className="p-4 bg-muted/50 rounded-lg border">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <UsersRound className="h-5 w-5" />
+                  <span className="font-medium">Total Teams</span>
+                </div>
+                <p className="font-bold text-lg">{teamStats.totalTeams}</p>
+                <p className="text-sm text-muted-foreground">participating</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Prizes Summary */}

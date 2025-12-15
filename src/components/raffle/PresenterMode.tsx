@@ -345,6 +345,12 @@ export function PresenterMode({
                 {currentWinner.email}
               </div>
             )}
+            {config.showTeam && currentWinner.team && (
+              <div className="text-lg text-muted-foreground flex items-center justify-center gap-2">
+                <Users className="h-5 w-5" />
+                {currentWinner.team}
+              </div>
+            )}
             {currentPrize && (
               <div className="bg-accent/20 rounded-xl py-4 px-8 inline-block">
                 <PrizeDisplay prize={currentPrize} size={prizeDisplaySize} />
