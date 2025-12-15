@@ -20,6 +20,7 @@ export function SlotAnimation({
   const prefersReducedMotion = useReducedMotion();
   const intervalRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
+  const finalIndexRef = useRef(0);
 
   // Generate random display names for animation
   const generateRandomNames = useCallback(() => {
@@ -35,11 +36,16 @@ export function SlotAnimation({
   // Initialize with names immediately
   const [displayNames, setDisplayNames] = useState<string[]>(() => generateRandomNames());
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [animationComplete, setAnimationComplete] = useState(false);
 
   useEffect(() => {
     if (isSpinning && participants.length > 0) {
+      // Reset animation complete state when starting a new spin
+      setAnimationComplete(false);
+      
       // If user prefers reduced motion, skip animation and reveal immediately
       if (prefersReducedMotion) {
+        setAnimationComplete(true);
         timeoutRef.current = window.setTimeout(() => {
           onSpinComplete();
         }, 500);
@@ -47,6 +53,7 @@ export function SlotAnimation({
       }
 
       setDisplayNames(generateRandomNames());
+      finalIndexRef.current = 0;
       
       // Start fast cycling
       let speed = 50;
@@ -55,7 +62,11 @@ export function SlotAnimation({
 
       const cycle = () => {
         iterations++;
-        setCurrentIndex(prev => (prev + 1) % 20);
+        setCurrentIndex(prev => {
+          const next = (prev + 1) % 20;
+          finalIndexRef.current = next;
+          return next;
+        });
         
         // Gradually slow down
         if (iterations > maxIterations * 0.6) {
@@ -65,14 +76,16 @@ export function SlotAnimation({
         if (iterations < maxIterations) {
           intervalRef.current = window.setTimeout(cycle, speed);
         } else {
-          // Final reveal
+          // Final reveal - use the ref to get the correct index
           if (winner) {
             setDisplayNames(prev => {
               const newNames = [...prev];
-              newNames[currentIndex % 20] = winner.name;
+              newNames[finalIndexRef.current] = winner.name;
               return newNames;
             });
           }
+          // Mark animation as complete BEFORE calling onSpinComplete
+          setAnimationComplete(true);
           timeoutRef.current = window.setTimeout(() => {
             onSpinComplete();
           }, 500);
@@ -98,7 +111,8 @@ export function SlotAnimation({
     visibleNames.push(displayNames[visibleNames.length % displayNames.length] || '...');
   }
 
-  if (!isSpinning && winner) {
+  // Show winner when animation is complete
+  if (animationComplete && winner) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
         {isBonusPrize && (
