@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Participant } from '@/types/raffle';
+import { Participant, RaffleConfig } from '@/types/raffle';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 interface SlotAnimationProps {
@@ -8,26 +8,51 @@ interface SlotAnimationProps {
   isSpinning: boolean;
   onSpinComplete: () => void;
   isBonusPrize?: boolean;
+  config?: Pick<RaffleConfig, 'animationDuration' | 'animationSpeed'>;
 }
 
 const ROW_HEIGHT = 80;
 const VISIBLE_ROWS = 5;
 const CENTER_ROW = 2; // 0-indexed, middle of 5 visible rows
 
-// 3-phase easing: fast blur -> readable medium -> slow suspenseful crawl
-const smoothDramaticEase = (t: number): number => {
-  if (t < 0.5) {
-    // Phase 1: Fast - cover 60% distance in first 50% of time (~9 names/sec blur)
-    return 0.6 * (t / 0.5);
-  } else if (t < 0.8) {
-    // Phase 2: Medium - cover 30% distance in next 30% of time (readable glimpses)
-    const mediumProgress = (t - 0.5) / 0.3;
-    return 0.6 + 0.3 * mediumProgress;
-  } else {
-    // Phase 3: Slow crawl - cover 10% distance in final 20% of time (very readable)
-    const slowProgress = (t - 0.8) / 0.2;
-    return 0.9 + 0.1 * (1 - Math.pow(1 - slowProgress, 4));
-  }
+// Easing functions based on speed preset
+const createEasingFunction = (speed: 'slow' | 'normal' | 'fast') => {
+  return (t: number): number => {
+    if (speed === 'slow') {
+      // Slow: Phase 1 = 40% time (50% distance), Phase 2 = 30% time (30% distance), Phase 3 = 30% time (20% distance)
+      if (t < 0.4) {
+        return 0.5 * (t / 0.4);
+      } else if (t < 0.7) {
+        const mediumProgress = (t - 0.4) / 0.3;
+        return 0.5 + 0.3 * mediumProgress;
+      } else {
+        const slowProgress = (t - 0.7) / 0.3;
+        return 0.8 + 0.2 * (1 - Math.pow(1 - slowProgress, 4));
+      }
+    } else if (speed === 'fast') {
+      // Fast: Phase 1 = 60% time (70% distance), Phase 2 = 20% time (20% distance), Phase 3 = 20% time (10% distance)
+      if (t < 0.6) {
+        return 0.7 * (t / 0.6);
+      } else if (t < 0.8) {
+        const mediumProgress = (t - 0.6) / 0.2;
+        return 0.7 + 0.2 * mediumProgress;
+      } else {
+        const slowProgress = (t - 0.8) / 0.2;
+        return 0.9 + 0.1 * (1 - Math.pow(1 - slowProgress, 4));
+      }
+    } else {
+      // Normal (default): Phase 1 = 50% time (60% distance), Phase 2 = 30% time (30% distance), Phase 3 = 20% time (10% distance)
+      if (t < 0.5) {
+        return 0.6 * (t / 0.5);
+      } else if (t < 0.8) {
+        const mediumProgress = (t - 0.5) / 0.3;
+        return 0.6 + 0.3 * mediumProgress;
+      } else {
+        const slowProgress = (t - 0.8) / 0.2;
+        return 0.9 + 0.1 * (1 - Math.pow(1 - slowProgress, 4));
+      }
+    }
+  };
 };
 
 export function SlotAnimation({ 
@@ -35,8 +60,12 @@ export function SlotAnimation({
   winner, 
   isSpinning, 
   onSpinComplete,
-  isBonusPrize 
+  isBonusPrize,
+  config
 }: SlotAnimationProps) {
+  const animationDuration = (config?.animationDuration ?? 6) * 1000;
+  const animationSpeed = config?.animationSpeed ?? 'normal';
+  const easingFunction = createEasingFunction(animationSpeed);
   const prefersReducedMotion = useReducedMotion();
   const animationRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
@@ -112,16 +141,15 @@ export function SlotAnimation({
       // When scrollOffset = winnerPos * ROW_HEIGHT, the winner will be at centeredIndex = winnerPos
       const targetOffset = winnerPos * ROW_HEIGHT;
       
-      // Animation parameters
-      const animationDuration = 6000; // 6 seconds total
+      // Animation parameters - use config values
       const startTime = performance.now();
 
       const animate = (currentTime: number) => {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / animationDuration, 1);
         
-        // Apply 3-phase easing for smooth, readable slowdown
-        const easedProgress = smoothDramaticEase(progress);
+        // Apply easing based on speed preset
+        const easedProgress = easingFunction(progress);
         
         // Calculate current scroll position
         const currentOffset = easedProgress * targetOffset;
@@ -151,7 +179,7 @@ export function SlotAnimation({
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [isSpinning, participants, winner, buildScrollList, onSpinComplete, prefersReducedMotion]);
+  }, [isSpinning, participants, winner, buildScrollList, onSpinComplete, prefersReducedMotion, animationDuration, easingFunction]);
 
   // Show winner when animation is complete
   if (animationComplete && winner) {

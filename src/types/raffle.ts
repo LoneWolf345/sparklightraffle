@@ -25,6 +25,8 @@ export interface RaffleConfig {
   showEmail: boolean;
   showTeam: boolean;
   soundEnabled: boolean;
+  animationDuration: number; // Total spin time in seconds (4-12)
+  animationSpeed: 'slow' | 'normal' | 'fast'; // Starting speed preset
 }
 
 export interface ImportSummary {
