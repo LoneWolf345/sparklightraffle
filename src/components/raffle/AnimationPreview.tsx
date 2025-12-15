@@ -7,7 +7,7 @@ import { WheelAnimation } from './WheelAnimation';
 
 interface AnimationPreviewProps {
   animationStyle: 'slot' | 'wheel';
-  config?: Pick<RaffleConfig, 'animationDuration' | 'animationSpeed'>;
+  config?: Pick<RaffleConfig, 'animationDuration' | 'animationSpeed' | 'animationScrollDistance'>;
   participants?: Participant[];
 }
 
