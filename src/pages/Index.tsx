@@ -5,15 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ImportPanel } from '@/components/raffle/ImportPanel';
-import { ConfigPanel } from '@/components/raffle/ConfigPanel';
 import { WinnersPanel } from '@/components/raffle/WinnersPanel';
 import { AuditPanel } from '@/components/raffle/AuditPanel';
-import { ParticipantsPanel } from '@/components/raffle/ParticipantsPanel';
 import { PriorDrawsPanel } from '@/components/raffle/PriorDrawsPanel';
 import { PresenterMode } from '@/components/raffle/PresenterMode';
-import { BrandingPanel, BrandingConfig } from '@/components/raffle/BrandingPanel';
+import { BrandingConfig } from '@/components/raffle/BrandingPanel';
 import { AdminPanel } from '@/components/raffle/AdminPanel';
+import { SetupWizard } from '@/components/raffle/SetupWizard';
 import { Participant, Winner, RaffleConfig, ImportSummary, AuditLog } from '@/types/raffle';
 import { weightedRandomSelect, generateSeed, generateDrawId, createAuditLog, calculateChecksum } from '@/lib/raffle';
 import { useRafflePersistence } from '@/hooks/use-raffle-persistence';
@@ -21,9 +19,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCompanyBranding } from '@/hooks/use-company-branding';
 import { maskWinners, maskParticipants } from '@/lib/privacy';
 import { toast } from '@/hooks/use-toast';
-import { PrizeConfig, getDefaultPrizeConfig, getPrizeForWinner } from '@/types/prizes';
-import { PrizesPanel } from '@/components/raffle/PrizesPanel';
-import { PrizeDisplay } from '@/components/raffle/PrizeDisplay';
+import { PrizeConfig, getDefaultPrizeConfig } from '@/types/prizes';
 
 const defaultConfig: RaffleConfig = {
   numberOfWinners: 5,
@@ -494,11 +490,8 @@ export default function Index() {
         {/* Admin view with all tabs */}
         {isAdmin ? (
           <Tabs defaultValue="setup" className="space-y-6">
-            <TabsList className="grid w-full max-w-3xl grid-cols-6">
+            <TabsList className="grid w-full max-w-2xl grid-cols-5">
               <TabsTrigger value="setup">Setup</TabsTrigger>
-              <TabsTrigger value="participants">
-                Participants {participants.length > 0 && `(${participants.length})`}
-              </TabsTrigger>
               <TabsTrigger value="winners">
                 Winners {winners.length > 0 && `(${winners.length})`}
               </TabsTrigger>
@@ -510,53 +503,26 @@ export default function Index() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="setup" className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <ImportPanel 
-                  onImport={handleImport} 
-                  hasData={participants.length > 0} 
-                />
-                <div className="space-y-6">
-                  <ConfigPanel
-                    config={config}
-                    onConfigChange={setConfig}
-                    maxWinners={config.allowRepeats ? 999 : participants.length}
-                  />
-                  <BrandingPanel
-                    branding={branding}
-                    onBrandingChange={setBranding}
-                  />
-                  <PrizesPanel
-                    prizes={prizes}
-                    onPrizesChange={setPrizes}
-                    numberOfWinners={config.numberOfWinners}
-                  />
-                </div>
-              </div>
-
-              {/* Quick Start Card */}
-              {participants.length > 0 && winners.length === 0 && (
-                <Card className="border-primary/50 bg-primary/5">
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">Ready to Draw!</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {participants.length} participants with {totalTickets.toLocaleString()} total tickets loaded
-                        </p>
-                      </div>
-                      <Button size="lg" onClick={startPresenterMode}>
-                        <Play className="h-5 w-5 mr-2" />
-                        Enter Presenter Mode
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="participants">
-              <ParticipantsPanel participants={participants} />
+            <TabsContent value="setup">
+              <SetupWizard
+                participants={participants}
+                winners={winners}
+                config={config}
+                branding={branding}
+                prizes={prizes}
+                isLocked={isLocked}
+                totalTickets={totalTickets}
+                onImport={handleImport}
+                onConfigChange={setConfig}
+                onBrandingChange={setBranding}
+                onPrizesChange={setPrizes}
+                onStartRaffle={startPresenterMode}
+                onReplayPresentation={startReplayMode}
+                onSwitchToWinners={() => {
+                  const tabsList = document.querySelector('[value="winners"]');
+                  if (tabsList instanceof HTMLElement) tabsList.click();
+                }}
+              />
             </TabsContent>
 
             <TabsContent value="winners" className="space-y-4">
