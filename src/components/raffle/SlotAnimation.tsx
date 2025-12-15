@@ -20,21 +20,27 @@ export function SlotAnimation({
   const prefersReducedMotion = useReducedMotion();
   const intervalRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
-  const finalIndexRef = useRef(0);
+  const maxIterations = 40;
+  const finalStopIndex = maxIterations % 20; // Pre-calculate where animation will stop
 
-  // Generate random display names for animation
-  const generateRandomNames = useCallback(() => {
+  // Generate random display names with winner pre-positioned at final stop
+  const generateNamesWithWinner = useCallback((winnerToPlace: Participant | null) => {
     if (participants.length === 0) return Array(20).fill('Loading...');
     const names: string[] = [];
     for (let i = 0; i < 20; i++) {
-      const randomParticipant = participants[Math.floor(Math.random() * participants.length)];
-      names.push(randomParticipant?.name || 'Loading...');
+      if (i === finalStopIndex && winnerToPlace) {
+        // Place winner at the exact position where animation will stop
+        names.push(winnerToPlace.name);
+      } else {
+        const randomParticipant = participants[Math.floor(Math.random() * participants.length)];
+        names.push(randomParticipant?.name || 'Loading...');
+      }
     }
     return names;
-  }, [participants]);
+  }, [participants, finalStopIndex]);
 
-  // Initialize with names immediately
-  const [displayNames, setDisplayNames] = useState<string[]>(() => generateRandomNames());
+  // Initialize with random names (winner will be placed when spinning starts)
+  const [displayNames, setDisplayNames] = useState<string[]>(() => generateNamesWithWinner(null));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [animationComplete, setAnimationComplete] = useState(false);
 
@@ -42,6 +48,7 @@ export function SlotAnimation({
     if (isSpinning && participants.length > 0) {
       // Reset animation complete state when starting a new spin
       setAnimationComplete(false);
+      setCurrentIndex(0);
       
       // If user prefers reduced motion, skip animation and reveal immediately
       if (prefersReducedMotion) {
@@ -52,23 +59,18 @@ export function SlotAnimation({
         return;
       }
 
-      setDisplayNames(generateRandomNames());
-      finalIndexRef.current = 0;
+      // Generate names with winner pre-positioned at the final stop index
+      setDisplayNames(generateNamesWithWinner(winner));
       
       // Start fast cycling
       let speed = 50;
       let iterations = 0;
-      const maxIterations = 40;
 
       const cycle = () => {
         iterations++;
-        setCurrentIndex(prev => {
-          const next = (prev + 1) % 20;
-          finalIndexRef.current = next;
-          return next;
-        });
+        setCurrentIndex(prev => (prev + 1) % 20);
         
-        // Gradually slow down
+        // Gradually slow down after 60% of iterations
         if (iterations > maxIterations * 0.6) {
           speed = Math.min(speed + 15, 300);
         }
@@ -76,19 +78,12 @@ export function SlotAnimation({
         if (iterations < maxIterations) {
           intervalRef.current = window.setTimeout(cycle, speed);
         } else {
-          // Final reveal - use the ref to get the correct index
-          if (winner) {
-            setDisplayNames(prev => {
-              const newNames = [...prev];
-              newNames[finalIndexRef.current] = winner.name;
-              return newNames;
-            });
-          }
-          // Mark animation as complete BEFORE calling onSpinComplete
+          // Animation naturally lands on winner (already in position)
+          // Add a brief pause before showing the celebration screen
           setAnimationComplete(true);
           timeoutRef.current = window.setTimeout(() => {
             onSpinComplete();
-          }, 500);
+          }, 800);
         }
       };
 
@@ -99,7 +94,7 @@ export function SlotAnimation({
       if (intervalRef.current) clearTimeout(intervalRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [isSpinning, participants, winner, generateRandomNames, onSpinComplete, prefersReducedMotion]);
+  }, [isSpinning, participants, winner, generateNamesWithWinner, onSpinComplete, prefersReducedMotion, maxIterations]);
 
   const visibleNames = displayNames.slice(
     Math.max(0, currentIndex - 2),
