@@ -40,11 +40,11 @@ export function WinnersPanel({
   };
 
   const handleExportCSV = () => {
-    const csv = exportWinnersCSV(winners);
+    const csv = exportWinnersCSV(winners, prizes);
     downloadFile(csv, `sparklight-raffle-winners-${Date.now()}.csv`, 'text/csv');
     toast({
       title: 'Exported!',
-      description: 'Winners CSV downloaded',
+      description: prizes ? 'Winners CSV with prizes downloaded' : 'Winners CSV downloaded',
     });
   };
 
