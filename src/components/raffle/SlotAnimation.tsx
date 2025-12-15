@@ -8,7 +8,7 @@ interface SlotAnimationProps {
   isSpinning: boolean;
   onSpinComplete: () => void;
   isBonusPrize?: boolean;
-  config?: Pick<RaffleConfig, 'animationDuration' | 'animationSpeed'>;
+  config?: Pick<RaffleConfig, 'animationDuration' | 'animationSpeed' | 'animationScrollDistance'>;
 }
 
 const ROW_HEIGHT = 80;
@@ -66,6 +66,7 @@ export function SlotAnimation({
 }: SlotAnimationProps) {
   const animationDuration = (config?.animationDuration ?? 6) * 1000;
   const animationSpeed = config?.animationSpeed ?? 'normal';
+  const animationScrollDistance = config?.animationScrollDistance ?? 30;
   const easingFunction = useMemo(() => createEasingFunction(animationSpeed), [animationSpeed]);
   const prefersReducedMotion = useReducedMotion();
   const animationRef = useRef<number | null>(null);
@@ -78,7 +79,7 @@ export function SlotAnimation({
   const [showBounce, setShowBounce] = useState(false);
 
   // Build the scroll list with shuffled participants and winner at calculated position
-  const buildScrollList = useCallback((participantList: Participant[], winnerParticipant: Participant | null) => {
+  const buildScrollList = useCallback((participantList: Participant[], winnerParticipant: Participant | null, scrollDistance: number) => {
     if (participantList.length === 0 || !winnerParticipant) {
       return { names: [], winnerPos: 0 };
     }
@@ -88,8 +89,8 @@ export function SlotAnimation({
       .filter(p => p.name !== winnerParticipant.name || p.email !== winnerParticipant.email)
       .sort(() => Math.random() - 0.5);
 
-    // Determine minimum names needed for smooth scrolling
-    const minNames = Math.max(45, participantList.length * 2);
+    // Use configured scroll distance (capped, not scaled with participant count)
+    const minNames = animationScrollDistance;
     
     // Build the list, repeating shuffled names only if needed
     let names: string[] = [];
@@ -124,7 +125,7 @@ export function SlotAnimation({
       setScrollOffset(0);
 
       // Build the scroll list with winner positioned
-      const { names, winnerPos } = buildScrollList(participants, winner);
+      const { names, winnerPos } = buildScrollList(participants, winner, animationScrollDistance);
       setDisplayNames(names);
       setWinnerPosition(winnerPos);
 
@@ -180,7 +181,7 @@ export function SlotAnimation({
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [isSpinning, participants, winner, buildScrollList, onSpinComplete, prefersReducedMotion, animationDuration, easingFunction]);
+  }, [isSpinning, participants, winner, buildScrollList, onSpinComplete, prefersReducedMotion, animationDuration, easingFunction, animationScrollDistance]);
 
   // Show winner when animation is complete
   if (animationComplete && winner) {

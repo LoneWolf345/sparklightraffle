@@ -32,6 +32,7 @@ const defaultConfig: RaffleConfig = {
   soundEnabled: true,
   animationDuration: 6,
   animationSpeed: 'normal',
+  animationScrollDistance: 30,
 };
 
 export default function Index() {

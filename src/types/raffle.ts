@@ -27,6 +27,7 @@ export interface RaffleConfig {
   soundEnabled: boolean;
   animationDuration: number; // Total spin time in seconds (4-12)
   animationSpeed: 'slow' | 'normal' | 'fast'; // Starting speed preset
+  animationScrollDistance: number; // Number of names to scroll through (15-50)
 }
 
 export interface ImportSummary {
