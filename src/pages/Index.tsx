@@ -30,6 +30,8 @@ const defaultConfig: RaffleConfig = {
   showEmail: true,
   showTeam: false,
   soundEnabled: true,
+  animationDuration: 6,
+  animationSpeed: 'normal',
 };
 
 export default function Index() {

@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Participant } from '@/types/raffle';
+import { Participant, RaffleConfig } from '@/types/raffle';
 import { SlotAnimation } from './SlotAnimation';
 import { WheelAnimation } from './WheelAnimation';
 
 interface AnimationPreviewProps {
   animationStyle: 'slot' | 'wheel';
+  config?: Pick<RaffleConfig, 'animationDuration' | 'animationSpeed'>;
 }
 
 // Sample participants for preview
@@ -25,7 +26,7 @@ const SAMPLE_PARTICIPANTS: Participant[] = [
   { id: 'p12', name: 'Skyler White', email: 'skyler.w@example.com', entries: 4 },
 ];
 
-export function AnimationPreview({ animationStyle }: AnimationPreviewProps) {
+export function AnimationPreview({ animationStyle, config }: AnimationPreviewProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [previewWinner, setPreviewWinner] = useState<Participant | null>(null);
 
@@ -78,6 +79,7 @@ export function AnimationPreview({ animationStyle }: AnimationPreviewProps) {
               winner={previewWinner}
               isSpinning={isSpinning}
               onSpinComplete={handleSpinComplete}
+              config={config}
             />
           </div>
         ) : (

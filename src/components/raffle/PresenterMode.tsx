@@ -315,6 +315,7 @@ export function PresenterMode({
                 isSpinning={isDrawing}
                 onSpinComplete={handleSpinComplete}
                 isBonusPrize={isBonusPrize}
+                config={config}
               />
             ) : (
               <WheelAnimation

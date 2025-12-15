@@ -1,9 +1,10 @@
-import { Settings, Repeat, Monitor, Volume2, VolumeX, Gift } from 'lucide-react';
+import { Settings, Repeat, Monitor, Volume2, VolumeX, Gift, Timer, Gauge } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { RaffleConfig } from '@/types/raffle';
 import { AnimationPreview } from './AnimationPreview';
 
@@ -83,8 +84,61 @@ export function ConfigPanel({ config, onConfigChange, maxWinners }: ConfigPanelP
           </Select>
         </div>
 
+        {/* Animation Timing */}
+        <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+          <p className="text-sm font-medium flex items-center gap-2">
+            <Timer className="h-4 w-4" />
+            Animation Timing
+          </p>
+          
+          {/* Duration Slider */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Duration</Label>
+              <span className="text-sm font-medium text-primary">{config.animationDuration}s</span>
+            </div>
+            <Slider
+              value={[config.animationDuration]}
+              onValueChange={([value]) => updateConfig({ animationDuration: value })}
+              min={4}
+              max={12}
+              step={1}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Total time for the spinning animation (4-12 seconds)
+            </p>
+          </div>
+
+          {/* Speed Preset */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-sm">
+              <Gauge className="h-4 w-4" />
+              Speed Preset
+            </Label>
+            <Select
+              value={config.animationSpeed}
+              onValueChange={(value: 'slow' | 'normal' | 'fast') => updateConfig({ animationSpeed: value })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="slow">Slow & Dramatic</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="fast">Fast Start</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {config.animationSpeed === 'slow' && 'Slower overall, longer readable phases'}
+              {config.animationSpeed === 'normal' && 'Balanced speed with gradual slowdown'}
+              {config.animationSpeed === 'fast' && 'Quick initial burst, gradual slowdown'}
+            </p>
+          </div>
+        </div>
+
         {/* Animation Preview */}
-        <AnimationPreview animationStyle={config.animationStyle} />
+        <AnimationPreview animationStyle={config.animationStyle} config={config} />
 
         {/* Reveal Mode */}
         <div className="space-y-2">
