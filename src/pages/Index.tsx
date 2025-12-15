@@ -28,6 +28,7 @@ const defaultConfig: RaffleConfig = {
   revealMode: 'sequential',
   bonusRoundInterval: 0,
   showEmail: true,
+  showTeam: false,
   soundEnabled: true,
 };
 

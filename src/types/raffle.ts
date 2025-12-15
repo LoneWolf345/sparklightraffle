@@ -23,6 +23,7 @@ export interface RaffleConfig {
   revealMode: 'sequential' | 'bulk';
   bonusRoundInterval: number; // Every Nth winner is bonus (0 = disabled)
   showEmail: boolean;
+  showTeam: boolean;
   soundEnabled: boolean;
 }
 

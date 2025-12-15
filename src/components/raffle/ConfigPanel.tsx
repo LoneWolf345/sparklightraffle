@@ -141,6 +141,14 @@ export function ConfigPanel({ config, onConfigChange, maxWinners }: ConfigPanelP
           </div>
 
           <div className="flex items-center justify-between">
+            <Label>Show Team in Presenter Mode</Label>
+            <Switch
+              checked={config.showTeam}
+              onCheckedChange={(checked) => updateConfig({ showTeam: checked })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
             <Label className="flex items-center gap-2">
               {config.soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
               Sound Effects
