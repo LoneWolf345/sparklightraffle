@@ -9,6 +9,8 @@ import { PrizeConfig } from '@/types/prizes';
 export interface SavedDraw {
   id: string;
   draw_id: string;
+  draw_name?: string;
+  organizer_email?: string;
   created_at: string;
   total_participants: number;
   total_tickets: number;
@@ -27,7 +29,9 @@ export function useRafflePersistence() {
     datasetChecksum: string,
     isLocked: boolean,
     branding: BrandingConfig,
-    prizes: PrizeConfig | null
+    prizes: PrizeConfig | null,
+    drawName?: string,
+    organizerEmail?: string
   ): Promise<string | null> => {
     try {
       // First, check if draw already exists
@@ -53,6 +57,8 @@ export function useRafflePersistence() {
             is_locked: isLocked,
             event_banner_url: branding.eventBannerUrl,
             prizes: prizes as unknown as Json,
+            draw_name: drawName || null,
+            organizer_email: organizerEmail || null,
           })
           .eq('id', drawUuid);
 
@@ -82,6 +88,8 @@ export function useRafflePersistence() {
             is_locked: isLocked,
             event_banner_url: branding.eventBannerUrl,
             prizes: prizes as unknown as Json,
+            draw_name: drawName || null,
+            organizer_email: organizerEmail || null,
           })
           .select('id')
           .single();
@@ -128,6 +136,8 @@ export function useRafflePersistence() {
         .select(`
           id,
           draw_id,
+          draw_name,
+          organizer_email,
           created_at,
           total_participants,
           total_tickets,
@@ -142,6 +152,8 @@ export function useRafflePersistence() {
       return (draws || []).map(d => ({
         id: d.id,
         draw_id: d.draw_id,
+        draw_name: d.draw_name || undefined,
+        organizer_email: d.organizer_email || undefined,
         created_at: d.created_at,
         total_participants: d.total_participants,
         total_tickets: d.total_tickets,
@@ -165,6 +177,8 @@ export function useRafflePersistence() {
     isLocked: boolean;
     branding: BrandingConfig;
     prizes: PrizeConfig | null;
+    drawName?: string;
+    organizerEmail?: string;
   } | null> => {
     try {
       const { data: draw, error: drawError } = await supabase
@@ -218,6 +232,8 @@ export function useRafflePersistence() {
           prizeImageSize: (storedBranding?.prizeImageSize as PrizeImageSize) || 'large',
         },
         prizes: draw.prizes as unknown as PrizeConfig | null,
+        drawName: draw.draw_name || undefined,
+        organizerEmail: draw.organizer_email || undefined,
       };
     } catch (error) {
       console.error('Error loading draw:', error);

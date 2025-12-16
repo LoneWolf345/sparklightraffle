@@ -13,9 +13,11 @@ interface ConfigPanelProps {
   onConfigChange: (config: RaffleConfig) => void;
   maxWinners: number;
   participants?: Participant[];
+  drawName: string;
+  onDrawNameChange: (name: string) => void;
 }
 
-export function ConfigPanel({ config, onConfigChange, maxWinners, participants }: ConfigPanelProps) {
+export function ConfigPanel({ config, onConfigChange, maxWinners, participants, drawName, onDrawNameChange }: ConfigPanelProps) {
   const updateConfig = (updates: Partial<RaffleConfig>) => {
     onConfigChange({ ...config, ...updates });
   };
@@ -32,6 +34,22 @@ export function ConfigPanel({ config, onConfigChange, maxWinners, participants }
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Drawing Name */}
+        <div className="space-y-2">
+          <Label htmlFor="draw-name">Drawing Name (Optional)</Label>
+          <Input
+            id="draw-name"
+            type="text"
+            value={drawName}
+            onChange={(e) => onDrawNameChange(e.target.value)}
+            placeholder="e.g., Q4 2024 Holiday Raffle"
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground">
+            Give this raffle a memorable name for easy identification
+          </p>
+        </div>
+
         {/* Number of Winners */}
         <div className="space-y-2">
           <Label htmlFor="num-winners">Number of Winners</Label>

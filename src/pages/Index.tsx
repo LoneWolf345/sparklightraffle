@@ -51,6 +51,7 @@ export default function Index() {
   const [seed, setSeed] = useState<string>('');
   const [drawId, setDrawId] = useState<string>('');
   const [datasetChecksum, setDatasetChecksum] = useState<string>('');
+  const [drawName, setDrawName] = useState<string>('');
 
   // Presenter mode state
   const [showPresenter, setShowPresenter] = useState(false);
@@ -105,7 +106,7 @@ export default function Index() {
       clearTimeout(saveTimeoutRef.current);
     }
     saveTimeoutRef.current = setTimeout(() => {
-      saveDraw(drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding, prizes);
+      saveDraw(drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding, prizes, drawName, user?.email);
     }, 1000);
 
     return () => {
@@ -113,7 +114,7 @@ export default function Index() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [isAdmin, drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding, prizes, saveDraw]);
+  }, [isAdmin, drawId, participants, winners, config, seed, datasetChecksum, isLocked, branding, prizes, drawName, user?.email, saveDraw]);
 
   const handleLoadDraw = useCallback(async (id: string) => {
     const data = await loadDraw(id);
@@ -127,17 +128,20 @@ export default function Index() {
       setIsLocked(data.isLocked);
       setBranding(data.branding);
       setPrizes(data.prizes);
+      setDrawName(data.drawName || '');
       setDrawNumber(data.winners.length);
       setAuditLog(createAuditLog(
         data.drawId, 
         data.participants, 
         data.winners, 
         data.config, 
-        data.seed
+        data.seed,
+        data.drawName,
+        data.organizerEmail
       ));
       toast({
         title: 'Draw Loaded',
-        description: `Loaded draw ${data.drawId} with ${data.winners.length} winners`,
+        description: `Loaded draw ${data.drawName || data.drawId} with ${data.winners.length} winners`,
       });
     }
   }, [loadDraw]);
@@ -149,6 +153,7 @@ export default function Index() {
     setAuditLog(null);
     setDrawNumber(0);
     setDrawId(''); // Reset draw ID so a new one is created
+    setDrawName(''); // Reset draw name
     setDatasetChecksum(calculateChecksum(newParticipants));
     toast({
       title: 'Participants Imported',
@@ -183,14 +188,14 @@ export default function Index() {
       setSeed(newSeed);
       setDrawId(newDrawId);
       setDatasetChecksum(checksum);
-      setAuditLog(createAuditLog(newDrawId, participants, [], config, newSeed));
+      setAuditLog(createAuditLog(newDrawId, participants, [], config, newSeed, drawName, user?.email));
     }
     
     setShowPresenter(true);
     setCurrentWinner(null);
     setIsDrawing(false);
     setIsReplayMode(false);
-  }, [participants, config, drawId]);
+  }, [participants, config, drawId, drawName, user?.email]);
 
   const startReplayMode = useCallback(() => {
     if (winners.length === 0) {
@@ -340,11 +345,11 @@ export default function Index() {
       setDrawNumber(bulkWinners.length);
       // Update audit log with bulk winners
       if (drawId) {
-        setAuditLog(createAuditLog(drawId, participants, bulkWinners, config, seed));
+        setAuditLog(createAuditLog(drawId, participants, bulkWinners, config, seed, drawName, user?.email));
       }
       setBulkWinners([]);
     }
-  }, [bulkWinners, drawId, participants, config, seed]);
+  }, [bulkWinners, drawId, participants, config, seed, drawName, user?.email]);
 
   const handleBulkDraw = useCallback(() => {
     if (participants.length === 0) return;
@@ -529,10 +534,12 @@ export default function Index() {
                 prizes={prizes}
                 isLocked={isLocked}
                 totalTickets={totalTickets}
+                drawName={drawName}
                 onImport={handleImport}
                 onConfigChange={setConfig}
                 onBrandingChange={setBranding}
                 onPrizesChange={setPrizes}
+                onDrawNameChange={setDrawName}
                 onStartRaffle={startPresenterMode}
                 onReplayPresentation={startReplayMode}
                 onSwitchToWinners={() => setActiveTab('winners')}
@@ -545,6 +552,7 @@ export default function Index() {
                 participants={participants}
                 prizes={prizes}
                 isLocked={isLocked}
+                drawName={drawName}
                 onUndo={handleUndo}
                 onRestart={() => setShowRestartDialog(true)}
                 onLock={() => setShowLockDialog(true)}

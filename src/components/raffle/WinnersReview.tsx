@@ -13,6 +13,7 @@ interface WinnersReviewProps {
   participants: Participant[];
   prizes?: PrizeConfig | null;
   isLocked: boolean;
+  drawName?: string;
   onUndo: () => void;
   onRestart: () => void;
   onLock: () => void;
@@ -133,7 +134,8 @@ export function WinnersReview({
   winners, 
   participants,
   prizes,
-  isLocked, 
+  isLocked,
+  drawName,
   onUndo, 
   onRestart, 
   onLock,
@@ -189,7 +191,9 @@ export function WinnersReview({
         <div className="flex items-center gap-3">
           <Trophy className="h-8 w-8 text-primary" />
           <div>
-            <h2 className="text-2xl font-bold">Raffle Results</h2>
+            <h2 className="text-2xl font-bold">
+              {drawName || 'Raffle Results'}
+            </h2>
             <p className="text-muted-foreground">
               {winners.length} winner{winners.length !== 1 ? 's' : ''} drawn
             </p>

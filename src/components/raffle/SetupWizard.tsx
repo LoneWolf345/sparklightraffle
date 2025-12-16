@@ -28,10 +28,12 @@ interface SetupWizardProps {
   prizes: PrizeConfig | null;
   isLocked: boolean;
   totalTickets: number;
+  drawName: string;
   onImport: (participants: Participant[], summary: ImportSummary) => void;
   onConfigChange: (config: RaffleConfig) => void;
   onBrandingChange: (branding: BrandingConfig) => void;
   onPrizesChange: (prizes: PrizeConfig | null) => void;
+  onDrawNameChange: (name: string) => void;
   onStartRaffle: () => void;
   onReplayPresentation: () => void;
   onSwitchToWinners: () => void;
@@ -45,10 +47,12 @@ export function SetupWizard({
   prizes,
   isLocked,
   totalTickets,
+  drawName,
   onImport,
   onConfigChange,
   onBrandingChange,
   onPrizesChange,
+  onDrawNameChange,
   onStartRaffle,
   onReplayPresentation,
   onSwitchToWinners,
@@ -234,6 +238,8 @@ export function SetupWizard({
             onConfigChange={onConfigChange}
             maxWinners={config.allowRepeats ? 999 : participants.length}
             participants={participants}
+            drawName={drawName}
+            onDrawNameChange={onDrawNameChange}
           />
         )}
 
@@ -243,6 +249,7 @@ export function SetupWizard({
             config={config}
             branding={branding}
             prizes={prizes}
+            drawName={drawName}
             onStartRaffle={onStartRaffle}
             isLocked={isLocked}
           />

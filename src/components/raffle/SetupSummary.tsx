@@ -10,6 +10,7 @@ interface SetupSummaryProps {
   config: RaffleConfig;
   branding: BrandingConfig;
   prizes: PrizeConfig | null;
+  drawName?: string;
   onStartRaffle: () => void;
   isLocked: boolean;
 }
@@ -19,6 +20,7 @@ export function SetupSummary({
   config, 
   branding, 
   prizes,
+  drawName,
   onStartRaffle,
   isLocked
 }: SetupSummaryProps) {
@@ -38,7 +40,9 @@ export function SetupSummary({
     <div className="space-y-6">
       <div className="text-center mb-8">
         <Trophy className="h-16 w-16 mx-auto text-primary mb-4" />
-        <h2 className="text-2xl font-bold">Ready to Start!</h2>
+        <h2 className="text-2xl font-bold">
+          {drawName || 'Ready to Start!'}
+        </h2>
         <p className="text-muted-foreground">Review your configuration and start the raffle</p>
       </div>
 
