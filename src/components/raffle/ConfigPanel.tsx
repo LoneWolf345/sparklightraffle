@@ -1,4 +1,4 @@
-import { Settings, Repeat, Monitor, Volume2, VolumeX, Gift, Timer, Gauge } from 'lucide-react';
+import { Settings, Repeat, Monitor, Volume2, VolumeX, Gift, Timer, Gauge, Circle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -158,6 +158,77 @@ export function ConfigPanel({ config, onConfigChange, maxWinners, participants }
             </p>
           </div>
         </div>
+
+        {/* Wheel Settings - only show when wheel animation is selected */}
+        {config.animationStyle === 'wheel' && (
+          <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <Circle className="h-4 w-4" />
+              Wheel Settings
+            </p>
+
+            {/* Wheel Segments */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Wheel Segments</Label>
+                <span className="text-sm font-medium text-primary">{config.wheelSegments} names</span>
+              </div>
+              <Slider
+                value={[config.wheelSegments]}
+                onValueChange={([value]) => updateConfig({ wheelSegments: value })}
+                min={6}
+                max={16}
+                step={1}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                {config.wheelSegments <= 8 && 'Fewer segments - larger slices, easier to read'}
+                {config.wheelSegments > 8 && config.wheelSegments <= 12 && 'Balanced - good visibility'}
+                {config.wheelSegments > 12 && 'More names visible - smaller slices'}
+              </p>
+            </div>
+
+            {/* Wheel Rotations */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Wheel Rotations</Label>
+                <span className="text-sm font-medium text-primary">{config.wheelRotations} turns</span>
+              </div>
+              <Slider
+                value={[config.wheelRotations]}
+                onValueChange={([value]) => updateConfig({ wheelRotations: value })}
+                min={2}
+                max={8}
+                step={1}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                {config.wheelRotations <= 3 && 'Quick spin - faster reveal'}
+                {config.wheelRotations > 3 && config.wheelRotations <= 5 && 'Medium spin - balanced excitement'}
+                {config.wheelRotations > 5 && 'Long spin - maximum suspense'}
+              </p>
+            </div>
+
+            {/* Winner Dwell Time */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Winner Pause Time</Label>
+                <span className="text-sm font-medium text-primary">{config.winnerDwellTime}s</span>
+              </div>
+              <Slider
+                value={[config.winnerDwellTime]}
+                onValueChange={([value]) => updateConfig({ winnerDwellTime: value })}
+                min={0.5}
+                max={3}
+                step={0.5}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                How long to pause on the winner before showing full-screen reveal
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Animation Preview */}
         <AnimationPreview animationStyle={config.animationStyle} config={config} participants={participants} />

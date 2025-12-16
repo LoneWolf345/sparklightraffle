@@ -318,12 +318,13 @@ export function PresenterMode({
                 config={config}
               />
             ) : (
-              <WheelAnimation
+            <WheelAnimation
                 participants={participants}
                 winner={currentWinner}
                 isSpinning={isDrawing}
                 onSpinComplete={handleSpinComplete}
                 isBonusPrize={isBonusPrize}
+                config={config}
               />
             )
           ) : (
