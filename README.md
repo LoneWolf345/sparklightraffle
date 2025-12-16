@@ -60,9 +60,54 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## Deployment
+
+### Lovable Publish
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+
+### OpenShift S2I Deployment
+
+This project is configured for deployment on OpenShift using S2I (Source-to-Image) with RHEL8 Node.js 20.
+
+#### Prerequisites
+
+- Access to OpenShift cluster with **Tekton Pipelines 1.17.0**
+- Permissions to create resources in the project namespace
+
+#### CI/CD Pipeline (Tekton)
+
+1. Create project if needed:
+   ```bash
+   oc new-project sparklight-raffle
+   ```
+
+2. Apply pipeline resources:
+   ```bash
+   oc apply -f openshift/pipeline/pipeline-pvc.yaml
+   oc apply -f openshift/pipeline/pipeline.yaml
+   ```
+
+3. Start the pipeline:
+   ```bash
+   oc create -f openshift/pipeline/pipeline-run.yaml
+   ```
+
+#### Manual Deploy (Alternative)
+
+1. Apply deployment resources:
+   ```bash
+   oc apply -f openshift/deployment.yaml
+   oc apply -f openshift/service.yaml
+   oc apply -f openshift/route.yaml
+   oc apply -f openshift/network-policy.yaml
+   ```
+
+#### Configuration
+
+- **Security Context Constraint:** nonroot-v2
+- **Resource Limits:** CPU 200m-500m, Memory 256Mi-512Mi
+- **Health Probes:** HTTP GET `/` on port 8080
 
 ## Can I connect a custom domain to my Lovable project?
 
