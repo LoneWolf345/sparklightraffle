@@ -58,14 +58,34 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
         return currentRotation + rotations * 360 + Math.random() * 360;
       }
       
-      // Calculate angle to land winner at pointer (right side, 0 degrees)
-      // Each segment center is at (index + 0.5) * segmentAngle from start
+      // Calculate the angle where the winner segment's center is drawn
+      // Segments are drawn starting at -90 degrees (top), so segment center is at:
+      // (index + 0.5) * segmentAngle - 90 + rotation
+      // For the pointer at 0 degrees (right side), we need:
+      // (winnerIndex + 0.5) * segmentAngle - 90 + targetRotation ≡ 0 (mod 360)
+      // So: targetRotation = 90 - (winnerIndex + 0.5) * segmentAngle
+      
       const winnerAngle = (winnerIndex + 0.5) * segmentAngle;
-      // We want this angle to align with the pointer at 0 degrees
-      // So we need to rotate by (360 - winnerAngle) plus full rotations
+      const targetAngle = 90 - winnerAngle;
+      
+      // Normalize current rotation to 0-360 range
+      const currentAngleNormalized = ((currentRotation % 360) + 360) % 360;
+      
+      // Calculate how much additional rotation needed to reach target
+      let additionalRotation = targetAngle - currentAngleNormalized;
+      
+      // Ensure we always spin forward (positive direction)
+      while (additionalRotation <= 0) {
+        additionalRotation += 360;
+      }
+      
+      // Add base rotations plus the precise additional rotation
       const baseRotation = rotations * 360;
-      const finalAngle = 360 - winnerAngle + 90; // +90 because we draw starting at -90
-      return currentRotation + baseRotation + finalAngle + Math.random() * 0.5 * segmentAngle; // Small variance
+      
+      // Small variance within the segment for visual interest (centered so winner stays in segment)
+      const variance = (Math.random() - 0.5) * 0.3 * segmentAngle;
+      
+      return currentRotation + baseRotation + additionalRotation + variance;
     }, [winner, wheelParticipants, rotations, segmentAngle]);
 
     // Draw the wheel
