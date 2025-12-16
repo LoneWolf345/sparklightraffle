@@ -1,4 +1,4 @@
-import { Settings, Repeat, Monitor, Volume2, VolumeX, Gift, Timer, Gauge, Circle } from 'lucide-react';
+import { Settings, Repeat, Monitor, Volume2, VolumeX, Gift, Timer, Gauge, Circle, List } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -136,28 +136,38 @@ export function ConfigPanel({ config, onConfigChange, maxWinners, participants }
               {config.animationSpeed === 'fast' && 'Quick initial burst, gradual slowdown'}
             </p>
           </div>
-
-          {/* Scroll Distance */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Scroll Distance</Label>
-              <span className="text-sm font-medium text-primary">{config.animationScrollDistance} names</span>
-            </div>
-            <Slider
-              value={[config.animationScrollDistance]}
-              onValueChange={([value]) => updateConfig({ animationScrollDistance: value })}
-              min={15}
-              max={50}
-              step={5}
-              className="w-full"
-            />
-            <p className="text-xs text-muted-foreground">
-              {config.animationScrollDistance <= 20 && 'Short - More readable, slower scroll'}
-              {config.animationScrollDistance > 20 && config.animationScrollDistance <= 35 && 'Medium - Balanced scroll speed'}
-              {config.animationScrollDistance > 35 && 'Long - More dramatic, faster scroll'}
-            </p>
-          </div>
         </div>
+
+        {/* Slot Settings - only show when slot animation is selected */}
+        {config.animationStyle === 'slot' && (
+          <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <List className="h-4 w-4" />
+              Slot Settings
+            </p>
+
+            {/* Scroll Distance */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Scroll Distance</Label>
+                <span className="text-sm font-medium text-primary">{config.animationScrollDistance} names</span>
+              </div>
+              <Slider
+                value={[config.animationScrollDistance]}
+                onValueChange={([value]) => updateConfig({ animationScrollDistance: value })}
+                min={15}
+                max={50}
+                step={5}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                {config.animationScrollDistance <= 20 && 'Short - More readable, slower scroll'}
+                {config.animationScrollDistance > 20 && config.animationScrollDistance <= 35 && 'Medium - Balanced scroll speed'}
+                {config.animationScrollDistance > 35 && 'Long - More dramatic, faster scroll'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Wheel Settings - only show when wheel animation is selected */}
         {config.animationStyle === 'wheel' && (
