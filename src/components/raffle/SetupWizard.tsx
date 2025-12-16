@@ -137,7 +137,7 @@ export function SetupWizard({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-4">
       {/* Progress Bar */}
       {!isSummaryStep && (
         <WizardProgress
@@ -148,8 +148,53 @@ export function SetupWizard({
         />
       )}
 
+      {/* Navigation Buttons - Now directly below progress */}
+      {!isSummaryStep && (
+        <div className="flex justify-between items-center py-3 px-4 bg-muted/30 rounded-lg border">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            disabled={currentStep === 0}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+
+          <div className="text-sm text-muted-foreground font-medium">
+            Step {currentStep + 1} of {SETUP_STEPS.length}
+          </div>
+
+          <Button
+            onClick={handleNext}
+            disabled={!canProceed(currentStep)}
+          >
+            {currentStep === SETUP_STEPS.length - 1 ? (
+              <>
+                Review & Start
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </>
+            ) : (
+              <>
+                Next
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
+      {/* Back button on summary - also at top */}
+      {isSummaryStep && (
+        <div className="flex justify-center py-3 px-4 bg-muted/30 rounded-lg border">
+          <Button variant="outline" onClick={handleBack}>
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back to Configuration
+          </Button>
+        </div>
+      )}
+
       {/* Step Content */}
-      <div className="min-h-[400px]">
+      <div>
         {currentStep === 0 && (
           <ImportPanel
             onImport={(p, s) => {
@@ -203,51 +248,6 @@ export function SetupWizard({
           />
         )}
       </div>
-
-      {/* Navigation Buttons */}
-      {!isSummaryStep && (
-        <div className="flex justify-between items-center pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 0}
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-
-          <div className="text-sm text-muted-foreground">
-            Step {currentStep + 1} of {SETUP_STEPS.length}
-          </div>
-
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed(currentStep)}
-          >
-            {currentStep === SETUP_STEPS.length - 1 ? (
-              <>
-                Review & Start
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </>
-            ) : (
-              <>
-                Next
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </>
-            )}
-          </Button>
-        </div>
-      )}
-
-      {/* Back button on summary */}
-      {isSummaryStep && (
-        <div className="flex justify-center pt-4 border-t">
-          <Button variant="outline" onClick={handleBack}>
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back to Configuration
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
