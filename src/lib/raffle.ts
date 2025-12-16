@@ -60,10 +60,14 @@ export function createAuditLog(
   participants: Participant[],
   winners: Winner[],
   config: RaffleConfig,
-  seed: string
+  seed: string,
+  drawName?: string,
+  organizerEmail?: string
 ): AuditLog {
   return {
     drawId,
+    drawName,
+    organizerEmail,
     timestamp: new Date(),
     datasetChecksum: calculateChecksum(participants),
     seed,

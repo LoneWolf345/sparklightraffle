@@ -67,7 +67,8 @@ export function PriorDrawsPanel({ onLoadDraw }: PriorDrawsPanelProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Draw ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Organizer</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Participants</TableHead>
                 <TableHead>Winners</TableHead>
@@ -78,7 +79,12 @@ export function PriorDrawsPanel({ onLoadDraw }: PriorDrawsPanelProps) {
             <TableBody>
               {draws.map((draw) => (
                 <TableRow key={draw.id}>
-                  <TableCell className="font-mono text-xs">{draw.draw_id}</TableCell>
+                  <TableCell className="max-w-[150px] truncate" title={draw.draw_name || draw.draw_id}>
+                    {draw.draw_name || <span className="text-muted-foreground font-mono text-xs">{draw.draw_id}</span>}
+                  </TableCell>
+                  <TableCell className="max-w-[150px] truncate text-muted-foreground text-sm" title={draw.organizer_email}>
+                    {draw.organizer_email || '—'}
+                  </TableCell>
                   <TableCell>{format(new Date(draw.created_at), 'MMM d, yyyy HH:mm')}</TableCell>
                   <TableCell>{draw.total_participants}</TableCell>
                   <TableCell>{draw.winner_count}</TableCell>

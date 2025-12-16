@@ -65,10 +65,12 @@ export type Database = {
           created_at: string
           dataset_checksum: string
           draw_id: string
+          draw_name: string | null
           event_banner_url: string | null
           id: string
           is_locked: boolean
           logo_url: string | null
+          organizer_email: string | null
           participants: Json
           prizes: Json | null
           seed: string
@@ -81,10 +83,12 @@ export type Database = {
           created_at?: string
           dataset_checksum: string
           draw_id: string
+          draw_name?: string | null
           event_banner_url?: string | null
           id?: string
           is_locked?: boolean
           logo_url?: string | null
+          organizer_email?: string | null
           participants: Json
           prizes?: Json | null
           seed: string
@@ -97,10 +101,12 @@ export type Database = {
           created_at?: string
           dataset_checksum?: string
           draw_id?: string
+          draw_name?: string | null
           event_banner_url?: string | null
           id?: string
           is_locked?: boolean
           logo_url?: string | null
+          organizer_email?: string | null
           participants?: Json
           prizes?: Json | null
           seed?: string

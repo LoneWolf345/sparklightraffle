@@ -44,6 +44,9 @@ export function AuditPanel({ auditLog }: AuditPanelProps) {
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Audit Log
+              {auditLog.drawName && (
+                <span className="text-muted-foreground font-normal">— {auditLog.drawName}</span>
+              )}
             </CardTitle>
             <CardDescription>
               Verifiable draw details for transparency
@@ -57,6 +60,26 @@ export function AuditPanel({ auditLog }: AuditPanelProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {auditLog.drawName && (
+            <div className="p-3 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                <Hash className="h-4 w-4" />
+                Drawing Name
+              </div>
+              <div className="text-sm font-medium">{auditLog.drawName}</div>
+            </div>
+          )}
+
+          {auditLog.organizerEmail && (
+            <div className="p-3 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                <Users className="h-4 w-4" />
+                Organizer
+              </div>
+              <div className="text-sm">{auditLog.organizerEmail}</div>
+            </div>
+          )}
+
           <div className="p-3 bg-muted rounded-lg">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Hash className="h-4 w-4" />

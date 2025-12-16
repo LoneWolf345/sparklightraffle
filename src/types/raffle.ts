@@ -42,6 +42,8 @@ export interface ImportSummary {
 
 export interface AuditLog {
   drawId: string;
+  drawName?: string;
+  organizerEmail?: string;
   timestamp: Date;
   datasetChecksum: string;
   seed: string;
