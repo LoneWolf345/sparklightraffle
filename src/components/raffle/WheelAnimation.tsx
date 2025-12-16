@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Participant, RaffleConfig } from '@/types/raffle';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
@@ -44,8 +44,39 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
     const dwellTime = (config?.winnerDwellTime ?? 1.5) * 1000; // Convert to ms
     const speed = config?.animationSpeed ?? 'normal';
     
-    // Select participants for wheel display (up to configured segments)
-    const wheelParticipants = participants.slice(0, Math.min(segments, participants.length));
+    // Build wheel participants ensuring winner is always included
+    const wheelParticipants = useMemo(() => {
+      const numSegments = Math.min(segments, participants.length);
+      
+      if (!winner) {
+        // No winner yet, just show first N participants
+        return participants.slice(0, numSegments);
+      }
+      
+      // Check if winner is already in the first N participants
+      const winnerInFirstN = participants.slice(0, numSegments).some(p => p.id === winner.id);
+      
+      if (winnerInFirstN) {
+        // Winner is already in the display set
+        return participants.slice(0, numSegments);
+      }
+      
+      // Winner is NOT in the first N - we need to build a custom set
+      // 1. Start with other participants (excluding winner)
+      // 2. Fill remaining slots with random selections
+      // 3. Insert winner at a random position
+      const others = participants.filter(p => p.id !== winner.id);
+      const shuffledOthers = [...others].sort(() => Math.random() - 0.5);
+      const fillerParticipants = shuffledOthers.slice(0, numSegments - 1);
+      
+      // Insert winner at a random position for visual interest
+      const winnerPosition = Math.floor(Math.random() * numSegments);
+      const result = [...fillerParticipants];
+      result.splice(winnerPosition, 0, winner);
+      
+      return result;
+    }, [participants, segments, winner]);
+    
     const segmentAngle = 360 / wheelParticipants.length;
 
     // Calculate target rotation to land on winner (called once at animation start)
