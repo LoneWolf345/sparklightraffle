@@ -33,6 +33,8 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
     const [phase, setPhase] = useState<'idle' | 'spinning' | 'dwelling' | 'complete'>('idle');
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationRef = useRef<number | null>(null);
+    const startRotationRef = useRef(0);
+    const targetRotationRef = useRef(0);
     const prefersReducedMotion = useReducedMotion();
     
     // Config with defaults
@@ -46,14 +48,14 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
     const wheelParticipants = participants.slice(0, Math.min(segments, participants.length));
     const segmentAngle = 360 / wheelParticipants.length;
 
-    // Calculate target rotation to land on winner
-    const calculateTargetRotation = useCallback(() => {
-      if (!winner) return rotation + rotations * 360;
+    // Calculate target rotation to land on winner (called once at animation start)
+    const calculateTargetRotation = useCallback((currentRotation: number) => {
+      if (!winner) return currentRotation + rotations * 360;
       
       const winnerIndex = wheelParticipants.findIndex(p => p.id === winner.id);
       if (winnerIndex === -1) {
         // Winner not on wheel, just spin a random amount
-        return rotation + rotations * 360 + Math.random() * 360;
+        return currentRotation + rotations * 360 + Math.random() * 360;
       }
       
       // Calculate angle to land winner at pointer (right side, 0 degrees)
@@ -63,8 +65,8 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
       // So we need to rotate by (360 - winnerAngle) plus full rotations
       const baseRotation = rotations * 360;
       const finalAngle = 360 - winnerAngle + 90; // +90 because we draw starting at -90
-      return rotation + baseRotation + finalAngle + Math.random() * 0.5 * segmentAngle; // Small variance
-    }, [winner, wheelParticipants, rotation, rotations, segmentAngle]);
+      return currentRotation + baseRotation + finalAngle + Math.random() * 0.5 * segmentAngle; // Small variance
+    }, [winner, wheelParticipants, rotations, segmentAngle]);
 
     // Draw the wheel
     useEffect(() => {
@@ -149,9 +151,10 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
         return;
       }
 
-      const startRotation = rotation;
-      const targetRotation = calculateTargetRotation();
-      const totalRotation = targetRotation - startRotation;
+      // Calculate target rotation once at the start of animation
+      startRotationRef.current = rotation;
+      targetRotationRef.current = calculateTargetRotation(rotation);
+      const totalRotation = targetRotationRef.current - startRotationRef.current;
       const friction = getFrictionCoefficient(speed);
       const startTime = performance.now();
 
@@ -163,7 +166,7 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
         // This creates a "coasting to a stop" effect
         const easedProgress = 1 - Math.pow(1 - progress, friction);
         
-        const currentRotation = startRotation + totalRotation * easedProgress;
+        const currentRotation = startRotationRef.current + totalRotation * easedProgress;
         setRotation(currentRotation);
 
         if (progress < 1) {
@@ -185,7 +188,8 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
           cancelAnimationFrame(animationRef.current);
         }
       };
-    }, [isSpinning, prefersReducedMotion, duration, dwellTime, speed, calculateTargetRotation, onSpinComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isSpinning, prefersReducedMotion, duration, dwellTime, speed, onSpinComplete]);
 
     // Show winner when complete
     if (phase === 'complete' && winner) {
