@@ -33,6 +33,9 @@ const defaultConfig: RaffleConfig = {
   animationDuration: 6,
   animationSpeed: 'normal',
   animationScrollDistance: 30,
+  wheelSegments: 12,
+  wheelRotations: 4,
+  winnerDwellTime: 1.5,
 };
 
 export default function Index() {

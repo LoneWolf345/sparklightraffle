@@ -7,7 +7,7 @@ import { WheelAnimation } from './WheelAnimation';
 
 interface AnimationPreviewProps {
   animationStyle: 'slot' | 'wheel';
-  config?: Pick<RaffleConfig, 'animationDuration' | 'animationSpeed' | 'animationScrollDistance'>;
+  config?: Pick<RaffleConfig, 'animationDuration' | 'animationSpeed' | 'animationScrollDistance' | 'wheelSegments' | 'wheelRotations' | 'winnerDwellTime'>;
   participants?: Participant[];
 }
 
@@ -106,6 +106,7 @@ export function AnimationPreview({ animationStyle, config, participants }: Anima
             winner={previewWinner}
             isSpinning={isSpinning}
             onSpinComplete={handleSpinComplete}
+            config={config}
           />
         )}
       </div>

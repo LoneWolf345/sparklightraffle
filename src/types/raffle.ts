@@ -28,6 +28,9 @@ export interface RaffleConfig {
   animationDuration: number; // Total spin time in seconds (4-12)
   animationSpeed: 'slow' | 'normal' | 'fast'; // Starting speed preset
   animationScrollDistance: number; // Number of names to scroll through (15-50)
+  wheelSegments: number; // Number of names on wheel (6-16)
+  wheelRotations: number; // Number of full rotations (2-8)
+  winnerDwellTime: number; // Pause time on winner before reveal (0.5-3 seconds)
 }
 
 export interface ImportSummary {

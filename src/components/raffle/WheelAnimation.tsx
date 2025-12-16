@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Participant } from '@/types/raffle';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Participant, RaffleConfig } from '@/types/raffle';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 interface WheelAnimationProps {
@@ -8,6 +8,16 @@ interface WheelAnimationProps {
   isSpinning: boolean;
   onSpinComplete: () => void;
   isBonusPrize?: boolean;
+  config?: Pick<RaffleConfig, 'animationDuration' | 'animationSpeed' | 'wheelSegments' | 'wheelRotations' | 'winnerDwellTime'>;
+}
+
+// Get friction coefficient based on speed preset
+function getFrictionCoefficient(speed: 'slow' | 'normal' | 'fast'): number {
+  switch (speed) {
+    case 'slow': return 2.5; // More dramatic coast-down
+    case 'fast': return 4.0; // Quicker stop
+    default: return 3.0;    // Balanced
+  }
 }
 
 export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationProps>(
@@ -16,17 +26,47 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
     winner, 
     isSpinning, 
     onSpinComplete,
-    isBonusPrize 
+    isBonusPrize,
+    config
   }, ref) {
     const [rotation, setRotation] = useState(0);
-    const [animationComplete, setAnimationComplete] = useState(false);
+    const [phase, setPhase] = useState<'idle' | 'spinning' | 'dwelling' | 'complete'>('idle');
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const animationRef = useRef<number | null>(null);
     const prefersReducedMotion = useReducedMotion();
     
-    // Select up to 12 participants for wheel display
-    const wheelParticipants = participants.slice(0, 12);
+    // Config with defaults
+    const segments = config?.wheelSegments ?? 12;
+    const rotations = config?.wheelRotations ?? 4;
+    const duration = (config?.animationDuration ?? 6) * 1000; // Convert to ms
+    const dwellTime = (config?.winnerDwellTime ?? 1.5) * 1000; // Convert to ms
+    const speed = config?.animationSpeed ?? 'normal';
+    
+    // Select participants for wheel display (up to configured segments)
+    const wheelParticipants = participants.slice(0, Math.min(segments, participants.length));
     const segmentAngle = 360 / wheelParticipants.length;
 
+    // Calculate target rotation to land on winner
+    const calculateTargetRotation = useCallback(() => {
+      if (!winner) return rotation + rotations * 360;
+      
+      const winnerIndex = wheelParticipants.findIndex(p => p.id === winner.id);
+      if (winnerIndex === -1) {
+        // Winner not on wheel, just spin a random amount
+        return rotation + rotations * 360 + Math.random() * 360;
+      }
+      
+      // Calculate angle to land winner at pointer (right side, 0 degrees)
+      // Each segment center is at (index + 0.5) * segmentAngle from start
+      const winnerAngle = (winnerIndex + 0.5) * segmentAngle;
+      // We want this angle to align with the pointer at 0 degrees
+      // So we need to rotate by (360 - winnerAngle) plus full rotations
+      const baseRotation = rotations * 360;
+      const finalAngle = 360 - winnerAngle + 90; // +90 because we draw starting at -90
+      return rotation + baseRotation + finalAngle + Math.random() * 0.5 * segmentAngle; // Small variance
+    }, [winner, wheelParticipants, rotation, rotations, segmentAngle]);
+
+    // Draw the wheel
     useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -51,7 +91,7 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
         ctx.arc(centerX, centerY, radius, startAngle, endAngle);
         ctx.closePath();
         
-        const hue = (index * 30) % 360;
+        const hue = (index * (360 / wheelParticipants.length)) % 360;
         ctx.fillStyle = `hsl(${hue}, 70%, ${index % 2 === 0 ? '55%' : '45%'})`;
         ctx.fill();
         ctx.strokeStyle = 'hsl(var(--background))';
@@ -68,8 +108,9 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
         ctx.shadowColor = 'rgba(0,0,0,0.5)';
         ctx.shadowBlur = 2;
         
-        const name = participant.name.length > 12 
-          ? participant.name.substring(0, 12) + '...' 
+        const maxLen = segments <= 8 ? 14 : 10;
+        const name = participant.name.length > maxLen 
+          ? participant.name.substring(0, maxLen) + '...' 
           : participant.name;
         ctx.fillText(name, radius - 20, 5);
         ctx.restore();
@@ -92,45 +133,62 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
       ctx.closePath();
       ctx.fillStyle = 'hsl(var(--primary))';
       ctx.fill();
-    }, [rotation, wheelParticipants, segmentAngle]);
+    }, [rotation, wheelParticipants, segmentAngle, segments]);
 
+    // Animation effect
     useEffect(() => {
-      if (isSpinning) {
-        // Reset animation complete state when starting a new spin
-        setAnimationComplete(false);
-        
-        // Skip animation if user prefers reduced motion
-        if (prefersReducedMotion) {
-          setAnimationComplete(true);
-          setTimeout(onSpinComplete, 300);
-          return;
-        }
-        
-        let currentRotation = rotation;
-        let speed = 20;
-        const targetRotation = rotation + 1800 + Math.random() * 720;
-        
-        const spin = () => {
-          if (currentRotation < targetRotation) {
-            // Ease out
-            const remaining = targetRotation - currentRotation;
-            speed = Math.max(1, remaining / 50);
-            currentRotation += speed;
-            setRotation(currentRotation);
-            requestAnimationFrame(spin);
-          } else {
-            // Mark animation as complete BEFORE calling onSpinComplete
-            setAnimationComplete(true);
-            setTimeout(onSpinComplete, 500);
-          }
-        };
-        
-        spin();
+      if (!isSpinning) return;
+      
+      // Reset state when starting new spin
+      setPhase('spinning');
+      
+      // Skip animation if user prefers reduced motion
+      if (prefersReducedMotion) {
+        setPhase('complete');
+        setTimeout(onSpinComplete, 300);
+        return;
       }
-    }, [isSpinning, prefersReducedMotion, onSpinComplete]);
 
-    // Show winner when animation is complete
-    if (animationComplete && winner) {
+      const startRotation = rotation;
+      const targetRotation = calculateTargetRotation();
+      const totalRotation = targetRotation - startRotation;
+      const friction = getFrictionCoefficient(speed);
+      const startTime = performance.now();
+
+      const animate = (currentTime: number) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Exponential decay easing for realistic friction
+        // This creates a "coasting to a stop" effect
+        const easedProgress = 1 - Math.pow(1 - progress, friction);
+        
+        const currentRotation = startRotation + totalRotation * easedProgress;
+        setRotation(currentRotation);
+
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animate);
+        } else {
+          // Spinning complete, start dwell phase
+          setPhase('dwelling');
+          setTimeout(() => {
+            setPhase('complete');
+            onSpinComplete();
+          }, dwellTime);
+        }
+      };
+
+      animationRef.current = requestAnimationFrame(animate);
+
+      return () => {
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+        }
+      };
+    }, [isSpinning, prefersReducedMotion, duration, dwellTime, speed, calculateTargetRotation, onSpinComplete]);
+
+    // Show winner when complete
+    if (phase === 'complete' && winner) {
       return (
         <div ref={ref} className="flex flex-col items-center justify-center py-8">
           {isBonusPrize && (
@@ -140,6 +198,27 @@ export const WheelAnimation = React.forwardRef<HTMLDivElement, WheelAnimationPro
           )}
           <div className="text-6xl md:text-8xl font-bold text-primary text-center animate-scale-in">
             {winner.name}
+          </div>
+        </div>
+      );
+    }
+
+    // Show dwelling state (winner highlighted on wheel)
+    if (phase === 'dwelling' && winner) {
+      return (
+        <div ref={ref} className="flex flex-col items-center justify-center">
+          <div className="relative">
+            <canvas 
+              ref={canvasRef} 
+              width={500} 
+              height={500} 
+              className="max-w-full h-auto"
+            />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="bg-background/90 px-6 py-3 rounded-lg shadow-lg border animate-scale-in">
+                <p className="text-2xl font-bold text-primary">{winner.name}</p>
+              </div>
+            </div>
           </div>
         </div>
       );
