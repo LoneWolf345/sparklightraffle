@@ -324,6 +324,49 @@ export default function Index() {
     });
   }, []);
 
+  // Start a new draw with the same participants, config, branding, and prizes
+  const handleNewDrawSameSettings = useCallback(() => {
+    const newSeed = generateSeed();
+    const newDrawId = generateDrawId();
+    setSeed(newSeed);
+    setDrawId(newDrawId);
+    setDrawName('');
+    setWinners([]);
+    setDrawNumber(0);
+    setCurrentWinner(null);
+    setAuditLog(null);
+    setIsLocked(false);
+    toast({
+      title: 'Ready for New Draw',
+      description: 'Same participants and settings, fresh random seed',
+    });
+  }, []);
+
+  // Start completely fresh - reset everything
+  const handleNewDrawFresh = useCallback(() => {
+    setParticipants([]);
+    setWinners([]);
+    setConfig(defaultConfig);
+    setBranding({
+      eventBannerUrl: null,
+      bannerSize: 'large',
+      prizeImageSize: 'large',
+    });
+    setPrizes(getDefaultPrizeConfig());
+    setSeed('');
+    setDrawId('');
+    setDrawName('');
+    setDatasetChecksum('');
+    setDrawNumber(0);
+    setCurrentWinner(null);
+    setAuditLog(null);
+    setIsLocked(false);
+    toast({
+      title: 'Starting Fresh',
+      description: 'Ready to import new participants',
+    });
+  }, []);
+
   const handleLock = useCallback(() => {
     setIsLocked(true);
     setShowLockDialog(false);
@@ -543,6 +586,8 @@ export default function Index() {
                 onStartRaffle={startPresenterMode}
                 onReplayPresentation={startReplayMode}
                 onSwitchToWinners={() => setActiveTab('winners')}
+                onNewDrawSameSettings={handleNewDrawSameSettings}
+                onNewDrawFresh={handleNewDrawFresh}
               />
             </TabsContent>
 
