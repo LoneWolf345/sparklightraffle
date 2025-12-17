@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Play, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, RotateCcw, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { WizardProgress, WizardStep } from './WizardProgress';
 import { ImportPanel } from './ImportPanel';
 import { ParticipantsPanel } from './ParticipantsPanel';
@@ -37,6 +38,8 @@ interface SetupWizardProps {
   onStartRaffle: () => void;
   onReplayPresentation: () => void;
   onSwitchToWinners: () => void;
+  onNewDrawSameSettings?: () => void;
+  onNewDrawFresh?: () => void;
 }
 
 export function SetupWizard({
@@ -56,6 +59,8 @@ export function SetupWizard({
   onStartRaffle,
   onReplayPresentation,
   onSwitchToWinners,
+  onNewDrawSameSettings,
+  onNewDrawFresh,
 }: SetupWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -134,6 +139,63 @@ export function SetupWizard({
                 </Button>
               )}
             </div>
+
+            {/* Post-completion options when locked */}
+            {isLocked && onNewDrawSameSettings && onNewDrawFresh && (
+              <>
+                <Separator className="my-4 w-full max-w-md" />
+                
+                <div className="w-full max-w-2xl">
+                  <h4 className="font-medium text-lg mb-4">Ready for Another Drawing?</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Same Settings Option */}
+                    <Card className="border-2 hover:border-primary/50 transition-colors">
+                      <CardContent className="pt-6">
+                        <div className="flex flex-col items-center text-center gap-3">
+                          <div className="p-2 bg-primary/10 rounded-full">
+                            <RefreshCw className="h-6 w-6 text-primary" />
+                          </div>
+                          <h5 className="font-medium">Same Settings</h5>
+                          <p className="text-sm text-muted-foreground">
+                            Keep participants, config & branding. New random seed for a fair drawing.
+                          </p>
+                          <Button 
+                            variant="outline" 
+                            className="w-full mt-2"
+                            onClick={onNewDrawSameSettings}
+                          >
+                            Start New Draw
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Fresh Start Option */}
+                    <Card className="border-2 hover:border-primary/50 transition-colors">
+                      <CardContent className="pt-6">
+                        <div className="flex flex-col items-center text-center gap-3">
+                          <div className="p-2 bg-secondary/50 rounded-full">
+                            <Sparkles className="h-6 w-6 text-secondary-foreground" />
+                          </div>
+                          <h5 className="font-medium">Fresh Start</h5>
+                          <p className="text-sm text-muted-foreground">
+                            Import new participants and start from scratch with a clean slate.
+                          </p>
+                          <Button 
+                            variant="outline" 
+                            className="w-full mt-2"
+                            onClick={onNewDrawFresh}
+                          >
+                            Start Fresh
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
