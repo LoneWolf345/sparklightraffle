@@ -62,52 +62,64 @@ This project is built with:
 
 ## Deployment
 
-### Lovable Publish
+### Docker (OpenShift-friendly)
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+This deployment uses a multi-stage Docker build with an Nginx runtime, listening on port `8080` and serving the app at `/`.
 
-### OpenShift S2I Deployment
+#### Build-time environment variables
 
-This project is configured for deployment on OpenShift using S2I (Source-to-Image) with RHEL8 Node.js 20.
+Vite injects environment variables at build time, so provide them during the Docker build. See `.env.example` for the required Supabase values and add your API variables with the `VITE_` prefix.
 
-#### Prerequisites
+```bash
+docker build \\
+  --build-arg VITE_SUPABASE_URL="https://your-project.supabase.co" \\
+  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="your-key" \\
+  --build-arg VITE_API_BASE_URL="https://api.example.com" \\
+  -t sparklight-raffle:latest .
+```
 
-- Access to OpenShift cluster with **Tekton Pipelines 1.17.0**
-- Permissions to create resources in the project namespace
+#### Run locally
 
-#### CI/CD Pipeline (Tekton)
+```bash
+docker run --rm -p 8080:8080 sparklight-raffle:latest
+```
 
-1. Create project if needed:
-   ```bash
-   oc new-project sparklight-raffle
-   ```
+#### Deployment flow (Docker-based)
 
-2. Apply pipeline resources:
-   ```bash
-   oc apply -f openshift/pipeline/pipeline-pvc.yaml
-   oc apply -f openshift/pipeline/pipeline.yaml
-   ```
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Dev as Developer
+  participant Build as Docker Build
+  participant Registry as Image Registry
+  participant OCP as OpenShift
 
-3. Start the pipeline:
-   ```bash
-   oc create -f openshift/pipeline/pipeline-run.yaml
-   ```
+  Dev->>Build: docker build (with VITE_* build args)
+  Build-->>Dev: Image artifact
+  Dev->>Registry: docker push
+  Registry-->>OCP: Image pull
+  OCP-->>Dev: App running on port 8080
+```
 
-#### Manual Deploy (Alternative)
+### Reusable deployment prompt
 
-1. Apply deployment resources:
-   ```bash
-   oc apply -f openshift/deployment.yaml
-   oc apply -f openshift/service.yaml
-   oc apply -f openshift/route.yaml
-   oc apply -f openshift/network-policy.yaml
-   ```
+Use the following prompt to prepare any Vite + React project for the same Docker-based deployment flow:
 
-#### Configuration
+```
+You are preparing a Vite + React + TypeScript app for Docker-based OpenShift deployment.
 
-- **Security Context Constraint:** nonroot-v2
-- **Resource Limits:** CPU 200m-500m, Memory 256Mi-512Mi
-- **Health Probes:** HTTP GET `/` on port 8080
+Requirements:
+- Use a multi-stage Dockerfile with a Node build stage and an Nginx runtime stage.
+- Base image preference: Alpine, most recent stable Node.
+- Expose port 8080 and serve the app at "/".
+- Support SPA routing (fallback to index.html).
+- Provide a .dockerignore.
+- Document build-time env vars (all VITE_*, Supabase keys, and API endpoints) in .env.example.
+- Add README instructions for docker build/run and a Mermaid sequence diagram for build->push->deploy.
+- Do not include OpenShift YAML manifests.
+
+Please implement the Dockerfile, nginx config (if needed), .dockerignore, .env.example, and README updates.
+```
 
 ## Can I connect a custom domain to my Lovable project?
 
