@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Shield, Clock, Bell, Palette, Mail, Briefcase, Building, Calendar, LogOut } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, User, Shield, Clock, Bell, Palette, Mail, Briefcase, Building, Calendar, LogOut, Link2, CheckCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,9 +10,23 @@ import { useAuth } from '@/hooks/use-auth-safe';
 import { useEntraUser } from '@/hooks/use-entra-user';
 import { useCompanyBranding } from '@/hooks/use-company-branding';
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { startEntraLinking } from '@/lib/entra-auth';
+import { toast } from 'sonner';
+
+// Microsoft logo SVG component
+const MicrosoftLogo = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+    <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+    <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+    <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+  </svg>
+);
 
 export default function Settings() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, isAdmin, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
   const { displayName, profilePhotoUrl, jobTitle, department, email: entraEmail, isEntraUser } = useEntraUser();
   const { logoUrl: companyLogoUrl } = useCompanyBranding();
@@ -24,6 +38,10 @@ export default function Settings() {
     reducedMotion: false,
     darkMode: false,
   });
+
+  // Entra config state
+  const [entraClientId, setEntraClientId] = useState<string | null>(null);
+  const [isLinking, setIsLinking] = useState(false);
 
   // Load preferences from localStorage
   useEffect(() => {
@@ -37,11 +55,50 @@ export default function Settings() {
     }
   }, []);
 
+  // Fetch Entra config on mount
+  useEffect(() => {
+    supabase.functions.invoke('get-entra-config').then(({ data }) => {
+      if (data?.enabled && data?.clientId) {
+        setEntraClientId(data.clientId);
+      }
+    });
+  }, []);
+
+  // Check for success redirect from linking flow
+  useEffect(() => {
+    if (searchParams.get('linked') === 'true') {
+      toast.success('Microsoft account connected successfully!', {
+        description: 'Your profile photo, job title, and department are now available.',
+      });
+      // Clean up the URL
+      window.history.replaceState({}, '', '/settings');
+    }
+  }, [searchParams]);
+
   // Save preferences to localStorage
   const updatePreference = (key: keyof typeof preferences, value: boolean) => {
     const updated = { ...preferences, [key]: value };
     setPreferences(updated);
     localStorage.setItem('userPreferences', JSON.stringify(updated));
+  };
+
+  // Handle Microsoft account linking
+  const handleLinkMicrosoft = async () => {
+    if (!entraClientId || !user?.id) {
+      toast.error('Unable to connect Microsoft account', {
+        description: 'Configuration is not available. Please try again later.',
+      });
+      return;
+    }
+
+    setIsLinking(true);
+    try {
+      await startEntraLinking(entraClientId, user.id);
+    } catch (error) {
+      console.error('Failed to start Microsoft linking:', error);
+      toast.error('Failed to start Microsoft linking');
+      setIsLinking(false);
+    }
   };
 
   const userDisplayName = displayName || user?.email;
@@ -167,6 +224,65 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Microsoft Account Linking - Only show for non-Entra users */}
+          {!isEntraUser && entraClientId && (
+            <Card className="border-blue-500/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MicrosoftLogo className="h-5 w-5" />
+                  Connect Microsoft Account
+                </CardTitle>
+                <CardDescription>
+                  Link your Microsoft account to display your profile photo, job title, and department
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-lg">
+                  <Link2 className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>Connecting your Microsoft account will:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-1">
+                      <li>Display your Microsoft profile photo</li>
+                      <li>Show your job title from your organization</li>
+                      <li>Show your department from your organization</li>
+                    </ul>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleLinkMicrosoft} 
+                  className="gap-2"
+                  disabled={isLinking}
+                >
+                  <MicrosoftLogo className="h-4 w-4" />
+                  {isLinking ? 'Connecting...' : 'Connect Microsoft Account'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Already linked indicator */}
+          {isEntraUser && (
+            <Card className="border-green-500/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-600">
+                  <CheckCircle className="h-5 w-5" />
+                  Microsoft Account Connected
+                </CardTitle>
+                <CardDescription>
+                  Your Microsoft account is linked and providing your profile data
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-lg text-sm">
+                  <MicrosoftLogo className="h-5 w-5" />
+                  <span className="text-green-700 dark:text-green-400">
+                    Profile photo, job title, and department are synced from Microsoft
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Session Section */}
           <Card>
