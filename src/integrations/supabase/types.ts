@@ -38,6 +38,77 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_log: {
+        Row: {
+          action_type: string
+          details_json: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          timestamp: string
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          details_json?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          details_json?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "entra_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entra_users: {
+        Row: {
+          auth_user_id: string | null
+          created_at: string
+          display_name: string
+          email: string
+          id: string
+          last_login_at: string
+          subject_id: string
+          tenant_id: string
+        }
+        Insert: {
+          auth_user_id?: string | null
+          created_at?: string
+          display_name: string
+          email: string
+          id?: string
+          last_login_at?: string
+          subject_id: string
+          tenant_id: string
+        }
+        Update: {
+          auth_user_id?: string | null
+          created_at?: string
+          display_name?: string
+          email?: string
+          id?: string
+          last_login_at?: string
+          subject_id?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -191,6 +262,16 @@ export type Database = {
         Returns: boolean
       }
       is_registered_user: { Args: { _user_id: string }; Returns: boolean }
+      log_action: {
+        Args: {
+          p_action_type: string
+          p_details_json?: Json
+          p_entity_id?: string
+          p_entity_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "user"
