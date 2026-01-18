@@ -1,1 +1,7 @@
 project_id = "tookphxcguqlyoyzpjwu"
+
+[functions.entra-token-exchange]
+verify_jwt = false
+
+[functions.get-entra-config]
+verify_jwt = false

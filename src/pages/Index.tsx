@@ -16,6 +16,7 @@ import { Participant, Winner, RaffleConfig, ImportSummary, AuditLog } from '@/ty
 import { weightedRandomSelect, generateSeed, generateDrawId, createAuditLog, calculateChecksum } from '@/lib/raffle';
 import { useRafflePersistence } from '@/hooks/use-raffle-persistence';
 import { useAuth } from '@/hooks/use-auth';
+import { useEntraUser } from '@/hooks/use-entra-user';
 import { useCompanyBranding } from '@/hooks/use-company-branding';
 import { maskWinners, maskParticipants } from '@/lib/privacy';
 import { toast } from '@/hooks/use-toast';
@@ -41,7 +42,11 @@ const defaultConfig: RaffleConfig = {
 export default function Index() {
   const navigate = useNavigate();
   const { user, isAdmin, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
+  const { displayName: entraDisplayName } = useEntraUser();
   const { logoUrl: companyLogoUrl } = useCompanyBranding();
+  
+  // Use Entra display name if available, otherwise fall back to email
+  const userDisplayName = entraDisplayName || user?.email;
   
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [winners, setWinners] = useState<Winner[]>([]);
@@ -505,8 +510,8 @@ export default function Index() {
                       Admin
                     </span>
                   )}
-                  <span className="text-sm text-muted-foreground hidden md:inline">
-                    {user?.email}
+                  <span className="text-sm text-muted-foreground hidden md:inline truncate max-w-[200px]" title={userDisplayName || undefined}>
+                    {userDisplayName}
                   </span>
                   <Button variant="ghost" size="sm" onClick={() => signOut()}>
                     <LogOut className="h-4 w-4 mr-2" />
