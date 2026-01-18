@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Play, Users, Ticket, AlertTriangle, LogIn, LogOut, Shield } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -42,7 +43,7 @@ const defaultConfig: RaffleConfig = {
 export default function Index() {
   const navigate = useNavigate();
   const { user, isAdmin, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
-  const { displayName: entraDisplayName } = useEntraUser();
+  const { displayName: entraDisplayName, profilePhotoUrl } = useEntraUser();
   const { logoUrl: companyLogoUrl } = useCompanyBranding();
   
   // Use Entra display name if available, otherwise fall back to email
@@ -504,6 +505,14 @@ export default function Index() {
                       Admin
                     </span>
                   )}
+                  <Avatar className="h-8 w-8">
+                    {profilePhotoUrl ? (
+                      <AvatarImage src={profilePhotoUrl} alt={userDisplayName || "User"} />
+                    ) : null}
+                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                      {userDisplayName?.charAt(0)?.toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
                   <span className="text-sm text-muted-foreground hidden md:inline truncate max-w-[200px]" title={userDisplayName || undefined}>
                     {userDisplayName}
                   </span>

@@ -3,7 +3,7 @@
 const TENANT_ID = 'd283f563-83f4-4d65-a9d1-028758bd1572';
 const AUTHORIZATION_ENDPOINT = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize`;
 const TOKEN_ENDPOINT = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`;
-const SCOPES = 'openid profile email';
+const SCOPES = 'openid profile email User.Read';
 
 // Storage keys
 const PKCE_VERIFIER_KEY = 'entra_pkce_verifier';

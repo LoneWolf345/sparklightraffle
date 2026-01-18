@@ -32,6 +32,15 @@ interface IdTokenClaims {
   oid: string;
 }
 
+interface GraphProfile {
+  displayName?: string;
+  mail?: string;
+  userPrincipalName?: string;
+  givenName?: string;
+  surname?: string;
+  jobTitle?: string;
+}
+
 // Parse JWT without verification (we trust Microsoft's signature)
 function parseJwt(token: string): IdTokenClaims | null {
   try {
@@ -44,6 +53,45 @@ function parseJwt(token: string): IdTokenClaims | null {
     const decoded = atob(padded);
     return JSON.parse(decoded);
   } catch {
+    return null;
+  }
+}
+
+// Fetch user profile from Microsoft Graph
+async function fetchGraphProfile(accessToken: string): Promise<GraphProfile | null> {
+  try {
+    const response = await fetch("https://graph.microsoft.com/v1.0/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) {
+      console.log("Graph profile fetch failed:", response.status);
+      return null;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching Graph profile:", error);
+    return null;
+  }
+}
+
+// Fetch user profile photo from Microsoft Graph
+async function fetchProfilePhoto(accessToken: string): Promise<string | null> {
+  try {
+    const response = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    
+    if (!response.ok) {
+      console.log("Profile photo not available:", response.status);
+      return null;
+    }
+    
+    const photoBlob = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(photoBlob)));
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.log("Error fetching profile photo:", error);
     return null;
   }
 }
@@ -73,10 +121,10 @@ serve(async (req) => {
       );
     }
 
-    // Exchange authorization code for tokens
+    // Exchange authorization code for tokens (with User.Read scope)
     const tokenParams = new URLSearchParams({
       client_id: clientId,
-      scope: "openid profile email",
+      scope: "openid profile email User.Read",
       code: code,
       redirect_uri: redirectUri,
       grant_type: "authorization_code",
@@ -112,8 +160,16 @@ serve(async (req) => {
       );
     }
 
-    const email = claims.preferred_username || claims.email || "";
-    const displayName = claims.name || email;
+    // Fetch additional profile data from Microsoft Graph
+    const graphProfile = await fetchGraphProfile(tokens.access_token);
+    const profilePhotoUrl = await fetchProfilePhoto(tokens.access_token);
+    
+    console.log("Graph profile fetched:", graphProfile ? "yes" : "no");
+    console.log("Profile photo fetched:", profilePhotoUrl ? "yes" : "no");
+
+    // Use Graph profile data if available, fallback to ID token claims
+    const email = graphProfile?.mail || graphProfile?.userPrincipalName || claims.preferred_username || claims.email || "";
+    const displayName = graphProfile?.displayName || claims.name || email;
 
     // Create Supabase admin client to create/sign in user
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -160,7 +216,7 @@ serve(async (req) => {
       console.log("Updated existing user:", supabaseUser.id);
     }
 
-    // Upsert entra_users record
+    // Upsert entra_users record with profile photo
     const { data: entraUserRecord, error: entraError } = await supabaseAdmin
       .from("entra_users")
       .upsert({
@@ -170,6 +226,7 @@ serve(async (req) => {
         email: email,
         auth_user_id: supabaseUser.id,
         last_login_at: new Date().toISOString(),
+        profile_photo_url: profilePhotoUrl,
       }, {
         onConflict: "tenant_id,subject_id",
       })
@@ -222,6 +279,7 @@ serve(async (req) => {
           displayName: displayName,
           entraSubjectId: claims.sub,
           entraTenantId: claims.tid,
+          profilePhotoUrl: profilePhotoUrl,
         },
         entraUserId: entraUserRecord?.id,
         verifyToken: token,
