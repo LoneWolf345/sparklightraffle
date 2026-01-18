@@ -80,9 +80,11 @@ export type Database = {
         Row: {
           auth_user_id: string | null
           created_at: string
+          department: string | null
           display_name: string
           email: string
           id: string
+          job_title: string | null
           last_login_at: string
           profile_photo_url: string | null
           subject_id: string
@@ -91,9 +93,11 @@ export type Database = {
         Insert: {
           auth_user_id?: string | null
           created_at?: string
+          department?: string | null
           display_name: string
           email: string
           id?: string
+          job_title?: string | null
           last_login_at?: string
           profile_photo_url?: string | null
           subject_id: string
@@ -102,9 +106,11 @@ export type Database = {
         Update: {
           auth_user_id?: string | null
           created_at?: string
+          department?: string | null
           display_name?: string
           email?: string
           id?: string
+          job_title?: string | null
           last_login_at?: string
           profile_photo_url?: string | null
           subject_id?: string

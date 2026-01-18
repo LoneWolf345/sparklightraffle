@@ -11,6 +11,8 @@ interface EntraUserRecord {
   last_login_at: string;
   auth_user_id: string | null;
   profile_photo_url: string | null;
+  job_title: string | null;
+  department: string | null;
 }
 
 export function useEntraUser() {
@@ -123,7 +125,10 @@ export function useEntraUser() {
       entraUser,
       isLoading,
       displayName: entraUser?.display_name || null,
+      email: entraUser?.email || null,
       profilePhotoUrl: entraUser?.profile_photo_url || null,
+      jobTitle: entraUser?.job_title || null,
+      department: entraUser?.department || null,
       upsertEntraUser,
       isEntraUser: !!entraUser,
     }),

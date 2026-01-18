@@ -1,7 +1,15 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Play, Users, Ticket, AlertTriangle, LogIn, LogOut, Shield } from 'lucide-react';
+import { Trophy, Play, Users, Ticket, AlertTriangle, LogIn, LogOut, Shield, Briefcase, Building } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,7 +51,7 @@ const defaultConfig: RaffleConfig = {
 export default function Index() {
   const navigate = useNavigate();
   const { user, isAdmin, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
-  const { displayName: entraDisplayName, profilePhotoUrl } = useEntraUser();
+  const { displayName: entraDisplayName, profilePhotoUrl, jobTitle, department, email: entraEmail } = useEntraUser();
   const { logoUrl: companyLogoUrl } = useCompanyBranding();
   
   // Use Entra display name if available, otherwise fall back to email
@@ -505,21 +513,74 @@ export default function Index() {
                       Admin
                     </span>
                   )}
-                  <Avatar className="h-8 w-8">
-                    {profilePhotoUrl ? (
-                      <AvatarImage src={profilePhotoUrl} alt={userDisplayName || "User"} />
-                    ) : null}
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                      {userDisplayName?.charAt(0)?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm text-muted-foreground hidden md:inline truncate max-w-[200px]" title={userDisplayName || undefined}>
-                    {userDisplayName}
-                  </span>
-                  <Button variant="ghost" size="sm" onClick={() => signOut()}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-10 gap-2 px-2">
+                        <Avatar className="h-8 w-8">
+                          {profilePhotoUrl ? (
+                            <AvatarImage src={profilePhotoUrl} alt={userDisplayName || "User"} />
+                          ) : null}
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {userDisplayName?.charAt(0)?.toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="hidden md:inline text-sm font-medium max-w-[150px] truncate">
+                          {userDisplayName}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-64" align="end">
+                      <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-3">
+                          {/* Profile Header */}
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-12 w-12">
+                              {profilePhotoUrl ? (
+                                <AvatarImage src={profilePhotoUrl} alt={userDisplayName || "User"} />
+                              ) : null}
+                              <AvatarFallback className="text-sm bg-primary/10 text-primary">
+                                {userDisplayName?.charAt(0)?.toUpperCase() || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col space-y-0.5">
+                              <p className="text-sm font-medium leading-none">{userDisplayName}</p>
+                              {(entraEmail || user?.email) && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                  {entraEmail || user?.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Job Info (from Microsoft Graph) */}
+                          {(jobTitle || department) && (
+                            <div className="space-y-1.5 pt-2 border-t">
+                              {jobTitle && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Briefcase className="h-3 w-3" />
+                                  <span>{jobTitle}</span>
+                                </div>
+                              )}
+                              {department && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Building className="h-3 w-3" />
+                                  <span>{department}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        className="text-destructive focus:text-destructive cursor-pointer"
+                        onClick={() => signOut()}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ) : (
                 <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
