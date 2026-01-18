@@ -1,11 +1,12 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, User, Shield, Clock, Bell, Palette, Mail, Briefcase, Building, Calendar, LogOut, Link2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, User, Shield, Clock, Bell, Palette, Mail, Briefcase, Building, Calendar, LogOut, Link2, CheckCircle, Monitor } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth-safe';
 import { useEntraUser } from '@/hooks/use-entra-user';
 import { useCompanyBranding } from '@/hooks/use-company-branding';
@@ -27,7 +28,7 @@ const MicrosoftLogo = ({ className }: { className?: string }) => (
 export default function Settings() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isAdmin, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
+  const { user, isAdmin, isAuthenticated, isLoading: authLoading, signOut, authMode, wiaUser, isWiaEnabled } = useAuth();
   const { displayName, profilePhotoUrl, jobTitle, department, email: entraEmail, isEntraUser } = useEntraUser();
   const { logoUrl: companyLogoUrl } = useCompanyBranding();
 
@@ -342,9 +343,29 @@ export default function Settings() {
 
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Authentication Method</Label>
-                  <p className="text-sm font-medium">
-                    {isEntraUser ? 'Microsoft Entra ID (SSO)' : 'Email & Password'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    {authMode === 'wia' ? (
+                      <>
+                        <Monitor className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium">Windows Integrated Auth</span>
+                        {wiaUser?.domain && (
+                          <Badge variant="secondary" className="text-xs">
+                            {wiaUser.domain}
+                          </Badge>
+                        )}
+                      </>
+                    ) : isEntraUser ? (
+                      <>
+                        <MicrosoftLogo className="h-4 w-4" />
+                        <span className="text-sm font-medium">Microsoft Entra ID (SSO)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Email & Password</span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-1">

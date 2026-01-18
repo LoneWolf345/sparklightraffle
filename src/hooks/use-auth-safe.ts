@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useWiaAuth, WiaUser, AuthMode } from './use-wia-auth';
 
 export type UserRole = 'admin' | 'user' | null;
 
@@ -66,6 +67,10 @@ export function useAuth() {
     isLoading: true,
     roleLoading: false,
   });
+
+  // WIA authentication state
+  const { wiaUser, isWiaEnabled, isLoading: wiaLoading } = useWiaAuth();
+  const [authMode, setAuthMode] = useState<AuthMode>('loading');
 
   const isMountedRef = useRef(true);
   const lastRoleUserIdRef = useRef<string | null>(null);
@@ -264,19 +269,41 @@ export function useAuth() {
     return { error };
   }, []);
 
+  // Determine auth mode based on WIA status
+  useEffect(() => {
+    if (!wiaLoading) {
+      if (isWiaEnabled && wiaUser) {
+        setAuthMode('wia');
+      } else {
+        setAuthMode('supabase');
+      }
+    }
+  }, [wiaLoading, isWiaEnabled, wiaUser]);
+
+  // Combined loading state - wait for both WIA check and Supabase auth
+  const combinedLoading = authState.isLoading || (authMode === 'loading');
+
+  // Determine if user is authenticated (either via WIA or Supabase)
+  const isAuthenticated = authMode === 'wia' ? !!wiaUser : !!authState.user;
+
   return useMemo(
     () => ({
       user: authState.user,
       session: authState.session,
       role: authState.role,
-      isLoading: authState.isLoading,
+      isLoading: combinedLoading,
       roleLoading: authState.roleLoading,
       isAdmin: authState.role === 'admin',
-      isAuthenticated: !!authState.user,
+      isAuthenticated,
       signUp,
       signIn,
       signOut,
+      // WIA-specific state
+      authMode,
+      wiaUser,
+      isWiaEnabled,
+      isWiaAuthenticated: authMode === 'wia' && !!wiaUser,
     }),
-    [authState, signIn, signOut, signUp]
+    [authState, combinedLoading, isAuthenticated, signIn, signOut, signUp, authMode, wiaUser, isWiaEnabled]
   );
 }

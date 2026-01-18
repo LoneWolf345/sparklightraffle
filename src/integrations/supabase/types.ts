@@ -258,6 +258,51 @@ export type Database = {
         }
         Relationships: []
       }
+      wia_users: {
+        Row: {
+          auth_user_id: string | null
+          created_at: string | null
+          department: string | null
+          display_name: string | null
+          domain: string | null
+          email: string | null
+          first_seen_at: string | null
+          id: string
+          job_title: string | null
+          last_login_at: string | null
+          updated_at: string | null
+          windows_username: string
+        }
+        Insert: {
+          auth_user_id?: string | null
+          created_at?: string | null
+          department?: string | null
+          display_name?: string | null
+          domain?: string | null
+          email?: string | null
+          first_seen_at?: string | null
+          id?: string
+          job_title?: string | null
+          last_login_at?: string | null
+          updated_at?: string | null
+          windows_username: string
+        }
+        Update: {
+          auth_user_id?: string | null
+          created_at?: string | null
+          department?: string | null
+          display_name?: string | null
+          domain?: string | null
+          email?: string | null
+          first_seen_at?: string | null
+          id?: string
+          job_title?: string | null
+          last_login_at?: string | null
+          updated_at?: string | null
+          windows_username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

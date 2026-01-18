@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.entra-link-account]
 verify_jwt = false
+
+[functions.wia-auth]
+verify_jwt = false
