@@ -459,13 +459,7 @@ export default function Index() {
     );
   }
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
+  // Don't block rendering on auth - let the page load immediately
 
   return (
     <div className="min-h-screen bg-background">
