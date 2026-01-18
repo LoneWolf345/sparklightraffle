@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { EntraUser } from '@/lib/entra-auth';
+import type { EntraUser } from '@/lib/entra-auth';
 
 interface EntraUserRecord {
   id: string;
@@ -117,11 +117,14 @@ export function useEntraUser() {
     return () => subscription.unsubscribe();
   }, [fetchEntraUser]);
 
-  return {
-    entraUser,
-    isLoading,
-    displayName: entraUser?.display_name || null,
-    upsertEntraUser,
-    isEntraUser: !!entraUser,
-  };
+  return useMemo(
+    () => ({
+      entraUser,
+      isLoading,
+      displayName: entraUser?.display_name || null,
+      upsertEntraUser,
+      isEntraUser: !!entraUser,
+    }),
+    [entraUser, isLoading, upsertEntraUser]
+  );
 }
