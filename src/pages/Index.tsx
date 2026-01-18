@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Play, Users, Ticket, AlertTriangle, LogIn, LogOut, Shield, Briefcase, Building } from 'lucide-react';
+import { Trophy, Play, Users, Ticket, AlertTriangle, LogIn, LogOut, Shield, Briefcase, Building, Settings } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -571,6 +571,13 @@ export default function Index() {
                           )}
                         </div>
                       </DropdownMenuLabel>
+                      <DropdownMenuItem 
+                        className="cursor-pointer"
+                        onClick={() => navigate('/settings')}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Settings
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         className="text-destructive focus:text-destructive cursor-pointer"
