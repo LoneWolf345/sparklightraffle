@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.get-entra-config]
 verify_jwt = false
+
+[functions.entra-link-account]
+verify_jwt = false

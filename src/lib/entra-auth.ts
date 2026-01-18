@@ -8,6 +8,7 @@ const SCOPES = 'openid profile email User.Read';
 // Storage keys
 const PKCE_VERIFIER_KEY = 'entra_pkce_verifier';
 const STATE_KEY = 'entra_state';
+const LINKING_AUTH_USER_ID_KEY = 'entra_linking_auth_user_id';
 
 // Generate random string for PKCE and state
 function generateRandomString(length: number): string {
@@ -34,6 +35,11 @@ export async function generateCodeChallenge(verifier: string): Promise<string> {
 // Get the redirect URI based on current origin
 export function getRedirectUri(): string {
   return `${window.location.origin}/auth/callback`;
+}
+
+// Get the redirect URI for account linking flow
+export function getLinkingRedirectUri(): string {
+  return `${window.location.origin}/auth/callback/link`;
 }
 
 // Start the Entra ID login flow
@@ -91,6 +97,44 @@ export function getAndClearCodeVerifier(): string | null {
   const verifier = sessionStorage.getItem(PKCE_VERIFIER_KEY);
   sessionStorage.removeItem(PKCE_VERIFIER_KEY);
   return verifier;
+}
+
+// Store the auth user ID for account linking
+export function storeLinkingAuthUserId(authUserId: string): void {
+  sessionStorage.setItem(LINKING_AUTH_USER_ID_KEY, authUserId);
+}
+
+// Get and clear the linking auth user ID
+export function getAndClearLinkingAuthUserId(): string | null {
+  const userId = sessionStorage.getItem(LINKING_AUTH_USER_ID_KEY);
+  sessionStorage.removeItem(LINKING_AUTH_USER_ID_KEY);
+  return userId;
+}
+
+// Start the Entra ID account linking flow
+export async function startEntraLinking(clientId: string, authUserId: string): Promise<void> {
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+  const state = generateRandomString(16);
+  
+  // Store PKCE verifier, state, and auth user ID for callback
+  sessionStorage.setItem(PKCE_VERIFIER_KEY, codeVerifier);
+  sessionStorage.setItem(STATE_KEY, state);
+  storeLinkingAuthUserId(authUserId);
+  
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: getLinkingRedirectUri(),
+    scope: SCOPES,
+    response_mode: 'query',
+    state: state,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+    nonce: generateRandomString(16),
+  });
+  
+  window.location.href = `${AUTHORIZATION_ENDPOINT}?${params.toString()}`;
 }
 
 // Types for Entra ID tokens
