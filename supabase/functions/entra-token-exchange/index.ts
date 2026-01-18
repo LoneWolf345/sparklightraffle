@@ -39,6 +39,7 @@ interface GraphProfile {
   givenName?: string;
   surname?: string;
   jobTitle?: string;
+  department?: string;
 }
 
 // Parse JWT without verification (we trust Microsoft's signature)
@@ -216,7 +217,7 @@ serve(async (req) => {
       console.log("Updated existing user:", supabaseUser.id);
     }
 
-    // Upsert entra_users record with profile photo
+    // Upsert entra_users record with profile photo and job info
     const { data: entraUserRecord, error: entraError } = await supabaseAdmin
       .from("entra_users")
       .upsert({
@@ -227,6 +228,8 @@ serve(async (req) => {
         auth_user_id: supabaseUser.id,
         last_login_at: new Date().toISOString(),
         profile_photo_url: profilePhotoUrl,
+        job_title: graphProfile?.jobTitle || null,
+        department: graphProfile?.department || null,
       }, {
         onConflict: "tenant_id,subject_id",
       })
