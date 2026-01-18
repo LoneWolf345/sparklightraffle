@@ -10,6 +10,7 @@ interface EntraUserRecord {
   email: string;
   last_login_at: string;
   auth_user_id: string | null;
+  profile_photo_url: string | null;
 }
 
 export function useEntraUser() {
@@ -122,6 +123,7 @@ export function useEntraUser() {
       entraUser,
       isLoading,
       displayName: entraUser?.display_name || null,
+      profilePhotoUrl: entraUser?.profile_photo_url || null,
       upsertEntraUser,
       isEntraUser: !!entraUser,
     }),

@@ -84,6 +84,7 @@ export type Database = {
           email: string
           id: string
           last_login_at: string
+          profile_photo_url: string | null
           subject_id: string
           tenant_id: string
         }
@@ -94,6 +95,7 @@ export type Database = {
           email: string
           id?: string
           last_login_at?: string
+          profile_photo_url?: string | null
           subject_id: string
           tenant_id: string
         }
@@ -104,6 +106,7 @@ export type Database = {
           email?: string
           id?: string
           last_login_at?: string
+          profile_photo_url?: string | null
           subject_id?: string
           tenant_id?: string
         }
