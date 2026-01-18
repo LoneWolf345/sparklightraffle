@@ -262,7 +262,7 @@ export default function Settings() {
           )}
 
           {/* Already linked indicator */}
-          {isEntraUser && (
+          {isEntraUser && entraClientId && (
             <Card className="border-green-500/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-green-600">
@@ -273,13 +273,22 @@ export default function Settings() {
                   Your Microsoft account is linked and providing your profile data
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-lg text-sm">
                   <MicrosoftLogo className="h-5 w-5" />
                   <span className="text-green-700 dark:text-green-400">
                     Profile photo, job title, and department are synced from Microsoft
                   </span>
                 </div>
+                <Button 
+                  variant="outline" 
+                  onClick={handleLinkMicrosoft}
+                  disabled={isLinking}
+                  className="gap-2"
+                >
+                  <Link2 className="h-4 w-4" />
+                  {isLinking ? 'Refreshing...' : 'Refresh Profile'}
+                </Button>
               </CardContent>
             </Card>
           )}
