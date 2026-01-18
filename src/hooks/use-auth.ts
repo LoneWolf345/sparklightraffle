@@ -12,7 +12,7 @@ interface AuthState {
   roleLoading: boolean;
 }
 
-const AUTH_TIMEOUT_MS = 2500; // Watchdog timeout
+const AUTH_TIMEOUT_MS = 5000; // Watchdog timeout - increased for network latency
 
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({

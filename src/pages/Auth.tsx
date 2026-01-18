@@ -101,15 +101,16 @@ export default function Auth() {
 
     setIsSubmitting(true);
     const { error } = await signIn(email, password);
-    setIsSubmitting(false);
-
+    
     if (error) {
+      setIsSubmitting(false);
       if (error.message.includes('Invalid login credentials')) {
         setError('Invalid email or password');
       } else {
         setError(error.message);
       }
     }
+    // Don't setIsSubmitting(false) on success - let onAuthStateChange handle navigation
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
