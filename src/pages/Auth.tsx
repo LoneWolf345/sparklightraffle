@@ -136,13 +136,7 @@ export default function Auth() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
+  // Don't block rendering - just show the page
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">

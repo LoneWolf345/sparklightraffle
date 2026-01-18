@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -9,7 +9,10 @@ interface AuthState {
   session: Session | null;
   role: UserRole;
   isLoading: boolean;
+  roleLoading: boolean;
 }
+
+const AUTH_TIMEOUT_MS = 2500; // Watchdog timeout
 
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
@@ -17,10 +20,15 @@ export function useAuth() {
     session: null,
     role: null,
     isLoading: true,
+    roleLoading: false,
   });
+  
+  const isMountedRef = useRef(true);
+  const watchdogRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchUserRole = useCallback(async (userId: string) => {
+  const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
     try {
+      console.log('[useAuth] fetchUserRole started for:', userId);
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -28,87 +36,142 @@ export function useAuth() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching user role:', error);
+        console.error('[useAuth] Error fetching user role:', error);
         return null;
       }
 
+      console.log('[useAuth] fetchUserRole result:', data?.role);
       return data?.role as UserRole || null;
     } catch (error) {
-      console.error('Error fetching user role:', error);
+      console.error('[useAuth] fetchUserRole exception:', error);
       return null;
     }
   }, []);
 
+  // Clear watchdog timer
+  const clearWatchdog = useCallback(() => {
+    if (watchdogRef.current) {
+      clearTimeout(watchdogRef.current);
+      watchdogRef.current = null;
+    }
+  }, []);
+
+  // Force complete auth loading (watchdog fallback)
+  const forceComplete = useCallback(() => {
+    console.warn('[useAuth] Watchdog fired - forcing isLoading=false');
+    if (isMountedRef.current) {
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+      }));
+    }
+  }, []);
+
   useEffect(() => {
-    let isMounted = true;
+    isMountedRef.current = true;
+    console.log('[useAuth] useEffect init');
 
-    // Check for existing session FIRST
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isMounted) return;
-      
-      if (session?.user) {
-        setAuthState(prev => ({
-          ...prev,
-          session,
-          user: session.user,
-        }));
-        
-        fetchUserRole(session.user.id).then(role => {
-          if (isMounted) {
-            setAuthState(prev => ({
-              ...prev,
-              role,
-              isLoading: false,
-            }));
-          }
-        });
-      } else {
-        setAuthState(prev => ({
-          ...prev,
-          session: null,
-          user: null,
-          role: null,
-          isLoading: false,
-        }));
-      }
-    });
+    // Start watchdog timer
+    watchdogRef.current = setTimeout(forceComplete, AUTH_TIMEOUT_MS);
 
-    // Set up auth state listener for future changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!isMounted) return;
+    // Check for existing session
+    const initSession = async () => {
+      try {
+        console.log('[useAuth] getSession started');
+        const { data: { session }, error } = await supabase.auth.getSession();
         
+        if (error) {
+          console.error('[useAuth] getSession error:', error);
+          throw error;
+        }
+        
+        console.log('[useAuth] getSession resolved, hasUser:', !!session?.user);
+
+        if (!isMountedRef.current) return;
+
+        // Set session/user and mark isLoading=false immediately
+        // Role will be fetched in background
         setAuthState(prev => ({
           ...prev,
           session,
           user: session?.user ?? null,
+          isLoading: false,
+          roleLoading: !!session?.user,
+        }));
+        
+        clearWatchdog();
+
+        // Fetch role in background if user exists
+        if (session?.user) {
+          const role = await fetchUserRole(session.user.id);
+          if (isMountedRef.current) {
+            setAuthState(prev => ({
+              ...prev,
+              role,
+              roleLoading: false,
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('[useAuth] initSession failed:', error);
+        if (isMountedRef.current) {
+          setAuthState({
+            user: null,
+            session: null,
+            role: null,
+            isLoading: false,
+            roleLoading: false,
+          });
+        }
+        clearWatchdog();
+      }
+    };
+
+    initSession();
+
+    // Set up auth state listener for future changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('[useAuth] onAuthStateChange:', event);
+        if (!isMountedRef.current) return;
+        
+        // Always update session/user immediately and mark loaded
+        setAuthState(prev => ({
+          ...prev,
+          session,
+          user: session?.user ?? null,
+          isLoading: false,
+          roleLoading: !!session?.user,
+          role: session?.user ? prev.role : null, // Keep existing role if same user
         }));
 
+        // Fetch role in background
         if (session?.user) {
-          fetchUserRole(session.user.id).then(role => {
-            if (isMounted) {
-              setAuthState(prev => ({
-                ...prev,
-                role,
-                isLoading: false,
-              }));
-            }
-          });
+          const role = await fetchUserRole(session.user.id);
+          if (isMountedRef.current) {
+            setAuthState(prev => ({
+              ...prev,
+              role,
+              roleLoading: false,
+            }));
+          }
         } else {
           setAuthState(prev => ({
             ...prev,
             role: null,
-            isLoading: false,
+            roleLoading: false,
           }));
         }
       }
     );
 
     return () => {
-      isMounted = false;
+      console.log('[useAuth] cleanup');
+      isMountedRef.current = false;
+      clearWatchdog();
       subscription.unsubscribe();
     };
-  }, [fetchUserRole]);
+  }, [fetchUserRole, clearWatchdog, forceComplete]);
 
   const signUp = useCallback(async (email: string, password: string) => {
     // Validate email domain
@@ -153,7 +216,11 @@ export function useAuth() {
   }, []);
 
   return {
-    ...authState,
+    user: authState.user,
+    session: authState.session,
+    role: authState.role,
+    isLoading: authState.isLoading,
+    roleLoading: authState.roleLoading,
     isAdmin: authState.role === 'admin',
     isAuthenticated: !!authState.user,
     signUp,
