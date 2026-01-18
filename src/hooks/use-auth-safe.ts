@@ -79,9 +79,15 @@ export function useAuth() {
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (error) return null;
+      if (error) {
+        console.error('[useAuth] Error fetching user role:', error);
+        return null;
+      }
+      
+      console.log('[useAuth] Fetched role for user:', userId, 'role:', data?.role);
       return (data?.role as UserRole) ?? null;
-    } catch {
+    } catch (err) {
+      console.error('[useAuth] fetchUserRole exception:', err);
       return null;
     }
   }, []);
@@ -89,17 +95,23 @@ export function useAuth() {
   const scheduleRoleFetch = useCallback(
     (userId: string) => {
       // Avoid refetching role unnecessarily for same user
-      if (lastRoleUserIdRef.current === userId) return;
+      if (lastRoleUserIdRef.current === userId) {
+        // Already fetched/fetching for this user - exit early
+        return;
+      }
       lastRoleUserIdRef.current = userId;
 
       setTimeout(() => {
         fetchUserRole(userId).then((role) => {
           if (!isMountedRef.current) return;
-          setAuthState((prev) => ({
-            ...prev,
-            role,
-            roleLoading: false,
-          }));
+          // Only update if this is still the current user
+          if (currentUserIdRef.current === userId) {
+            setAuthState((prev) => ({
+              ...prev,
+              role,
+              roleLoading: false,
+            }));
+          }
         });
       }, 0);
     },
@@ -111,6 +123,7 @@ export function useAuth() {
 
     // Listener FIRST (must be synchronous callback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[useAuth] onAuthStateChange event:', event, 'hasSession:', !!session);
       if (!isMountedRef.current) return;
 
       const nextUserId = session?.user?.id ?? null;
@@ -118,7 +131,7 @@ export function useAuth() {
       currentUserIdRef.current = nextUserId;
 
       if (userChanged) {
-        // Ensure we refetch role for a new user
+        // Ensure we refetch role for a new user (or clear for logout)
         lastRoleUserIdRef.current = null;
       }
 
@@ -140,6 +153,7 @@ export function useAuth() {
 
     // Then quick init using stored session first (no hanging promises)
     const stored = readStoredSession();
+    console.log('[useAuth] Initial stored session:', !!stored);
     if (stored?.user) {
       currentUserIdRef.current = stored.user.id;
       lastRoleUserIdRef.current = null;
@@ -235,6 +249,18 @@ export function useAuth() {
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
+    if (!error) {
+      // Force clear local state immediately
+      currentUserIdRef.current = null;
+      lastRoleUserIdRef.current = null;
+      setAuthState({
+        user: null,
+        session: null,
+        role: null,
+        isLoading: false,
+        roleLoading: false,
+      });
+    }
     return { error };
   }, []);
 
