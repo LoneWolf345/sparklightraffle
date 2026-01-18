@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useWiaAuth, AuthMode } from './use-wia-auth';
+export type { WiaUser } from './use-wia-auth';
+export type { AuthMode } from './use-wia-auth';
 
 export type UserRole = 'admin' | 'user' | null;
 
@@ -22,6 +25,10 @@ export function useAuth() {
     isLoading: true,
     roleLoading: false,
   });
+  
+  // WIA authentication state
+  const { wiaUser, isWiaEnabled, isLoading: wiaLoading, checkWiaAuth } = useWiaAuth();
+  const [authMode, setAuthMode] = useState<AuthMode>('loading');
   
   const isMountedRef = useRef(true);
   const watchdogRef = useRef<NodeJS.Timeout | null>(null);
@@ -221,16 +228,39 @@ export function useAuth() {
     return { error };
   }, []);
 
-  return {
+  // Determine auth mode based on WIA status
+  useEffect(() => {
+    if (!wiaLoading) {
+      if (isWiaEnabled && wiaUser) {
+        setAuthMode('wia');
+      } else {
+        setAuthMode('supabase');
+      }
+    }
+  }, [wiaLoading, isWiaEnabled, wiaUser]);
+
+  // Combined loading state - wait for both WIA check and Supabase auth
+  const combinedLoading = authState.isLoading || (authMode === 'loading');
+
+  // Determine if user is authenticated (either via WIA or Supabase)
+  const isAuthenticated = authMode === 'wia' ? !!wiaUser : !!authState.user;
+
+  return useMemo(() => ({
+    // Supabase auth state
     user: authState.user,
     session: authState.session,
     role: authState.role,
-    isLoading: authState.isLoading,
+    isLoading: combinedLoading,
     roleLoading: authState.roleLoading,
     isAdmin: authState.role === 'admin',
-    isAuthenticated: !!authState.user,
+    isAuthenticated,
     signUp,
     signIn,
     signOut,
-  };
+    // WIA-specific state
+    authMode,
+    wiaUser,
+    isWiaEnabled,
+    isWiaAuthenticated: authMode === 'wia' && !!wiaUser,
+  }), [authState, combinedLoading, isAuthenticated, signUp, signIn, signOut, authMode, wiaUser, isWiaEnabled]);
 }
