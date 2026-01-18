@@ -93,27 +93,21 @@ export function useEntraUser() {
     }
   }, []);
 
-  // Initialize - check for existing Entra user record
+  // Initialize - listen only to auth state changes (avoid duplicate getSession calls)
   useEffect(() => {
-    const checkEntraUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        const record = await fetchEntraUser(session.user.id);
-        setEntraUser(record);
-      }
-      
-      setIsLoading(false);
-    };
+    // Mark as not loading immediately - don't block on this
+    setIsLoading(false);
 
-    checkEntraUser();
-
-    // Listen for auth changes
+    // Listen for auth changes only
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (session?.user) {
-          const record = await fetchEntraUser(session.user.id);
-          setEntraUser(record);
+          // Fetch Entra user record in background using setTimeout to avoid deadlock
+          setTimeout(() => {
+            fetchEntraUser(session.user.id).then(record => {
+              setEntraUser(record);
+            });
+          }, 0);
         } else {
           setEntraUser(null);
         }
