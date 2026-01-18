@@ -15,7 +15,7 @@ import { SetupWizard } from '@/components/raffle/SetupWizard';
 import { Participant, Winner, RaffleConfig, ImportSummary, AuditLog } from '@/types/raffle';
 import { weightedRandomSelect, generateSeed, generateDrawId, createAuditLog, calculateChecksum } from '@/lib/raffle';
 import { useRafflePersistence } from '@/hooks/use-raffle-persistence';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth-safe';
 import { useEntraUser } from '@/hooks/use-entra-user';
 import { useCompanyBranding } from '@/hooks/use-company-branding';
 import { maskWinners, maskParticipants } from '@/lib/privacy';
