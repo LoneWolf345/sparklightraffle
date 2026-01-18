@@ -40,26 +40,60 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    let isMounted = true;
+
+    // Check for existing session FIRST
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      
+      if (session?.user) {
+        setAuthState(prev => ({
+          ...prev,
+          session,
+          user: session.user,
+        }));
+        
+        fetchUserRole(session.user.id).then(role => {
+          if (isMounted) {
+            setAuthState(prev => ({
+              ...prev,
+              role,
+              isLoading: false,
+            }));
+          }
+        });
+      } else {
+        setAuthState(prev => ({
+          ...prev,
+          session: null,
+          user: null,
+          role: null,
+          isLoading: false,
+        }));
+      }
+    });
+
+    // Set up auth state listener for future changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!isMounted) return;
+        
         setAuthState(prev => ({
           ...prev,
           session,
           user: session?.user ?? null,
         }));
 
-        // Defer role fetching with setTimeout to prevent deadlock
         if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id).then(role => {
+          fetchUserRole(session.user.id).then(role => {
+            if (isMounted) {
               setAuthState(prev => ({
                 ...prev,
                 role,
                 isLoading: false,
               }));
-            });
-          }, 0);
+            }
+          });
         } else {
           setAuthState(prev => ({
             ...prev,
@@ -70,31 +104,10 @@ export function useAuth() {
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthState(prev => ({
-        ...prev,
-        session,
-        user: session?.user ?? null,
-      }));
-
-      if (session?.user) {
-        fetchUserRole(session.user.id).then(role => {
-          setAuthState(prev => ({
-            ...prev,
-            role,
-            isLoading: false,
-          }));
-        });
-      } else {
-        setAuthState(prev => ({
-          ...prev,
-          isLoading: false,
-        }));
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchUserRole]);
 
   const signUp = useCallback(async (email: string, password: string) => {
