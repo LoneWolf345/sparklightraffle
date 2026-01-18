@@ -55,8 +55,10 @@ export default function Auth() {
     checkEntraConfig();
   }, []);
 
+  // Navigate when authenticated and release isSubmitting
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
+      setIsSubmitting(false);
       navigate('/');
     }
   }, [isAuthenticated, isLoading, navigate]);

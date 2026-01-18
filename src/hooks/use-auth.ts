@@ -74,7 +74,45 @@ export function useAuth() {
     // Start watchdog timer
     watchdogRef.current = setTimeout(forceComplete, AUTH_TIMEOUT_MS);
 
-    // Check for existing session
+    // Set up auth state listener FIRST (before getSession)
+    // CRITICAL: Keep this callback synchronous to avoid auth deadlocks
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('[useAuth] onAuthStateChange:', event, 'hasUser:', !!session?.user);
+        if (!isMountedRef.current) return;
+        
+        // Clear watchdog immediately - we have a definitive auth state
+        clearWatchdog();
+        
+        // Synchronously update session/user state - never await inside this callback
+        setAuthState(prev => ({
+          ...prev,
+          session,
+          user: session?.user ?? null,
+          isLoading: false,
+          roleLoading: !!session?.user,
+          role: session?.user ? prev.role : null,
+        }));
+
+        // Defer role fetching outside the callback using setTimeout(0)
+        if (session?.user) {
+          const userId = session.user.id;
+          setTimeout(() => {
+            fetchUserRole(userId).then(role => {
+              if (isMountedRef.current) {
+                setAuthState(prev => ({
+                  ...prev,
+                  role,
+                  roleLoading: false,
+                }));
+              }
+            });
+          }, 0);
+        }
+      }
+    );
+
+    // THEN check for existing session
     const initSession = async () => {
       try {
         console.log('[useAuth] getSession started');
@@ -89,8 +127,10 @@ export function useAuth() {
 
         if (!isMountedRef.current) return;
 
-        // Set session/user and mark isLoading=false immediately
-        // Role will be fetched in background
+        // Clear watchdog - we have session info
+        clearWatchdog();
+
+        // Set session/user and mark isLoading=false
         setAuthState(prev => ({
           ...prev,
           session,
@@ -98,23 +138,26 @@ export function useAuth() {
           isLoading: false,
           roleLoading: !!session?.user,
         }));
-        
-        clearWatchdog();
 
-        // Fetch role in background if user exists
+        // Fetch role in background if user exists (deferred)
         if (session?.user) {
-          const role = await fetchUserRole(session.user.id);
-          if (isMountedRef.current) {
-            setAuthState(prev => ({
-              ...prev,
-              role,
-              roleLoading: false,
-            }));
-          }
+          const userId = session.user.id;
+          setTimeout(() => {
+            fetchUserRole(userId).then(role => {
+              if (isMountedRef.current) {
+                setAuthState(prev => ({
+                  ...prev,
+                  role,
+                  roleLoading: false,
+                }));
+              }
+            });
+          }, 0);
         }
       } catch (error) {
         console.error('[useAuth] initSession failed:', error);
         if (isMountedRef.current) {
+          clearWatchdog();
           setAuthState({
             user: null,
             session: null,
@@ -123,47 +166,10 @@ export function useAuth() {
             roleLoading: false,
           });
         }
-        clearWatchdog();
       }
     };
 
     initSession();
-
-    // Set up auth state listener for future changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('[useAuth] onAuthStateChange:', event);
-        if (!isMountedRef.current) return;
-        
-        // Always update session/user immediately and mark loaded
-        setAuthState(prev => ({
-          ...prev,
-          session,
-          user: session?.user ?? null,
-          isLoading: false,
-          roleLoading: !!session?.user,
-          role: session?.user ? prev.role : null, // Keep existing role if same user
-        }));
-
-        // Fetch role in background
-        if (session?.user) {
-          const role = await fetchUserRole(session.user.id);
-          if (isMountedRef.current) {
-            setAuthState(prev => ({
-              ...prev,
-              role,
-              roleLoading: false,
-            }));
-          }
-        } else {
-          setAuthState(prev => ({
-            ...prev,
-            role: null,
-            roleLoading: false,
-          }));
-        }
-      }
-    );
 
     return () => {
       console.log('[useAuth] cleanup');
