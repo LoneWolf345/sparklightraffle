@@ -66,15 +66,23 @@ This project is built with:
 
 This deployment uses a multi-stage Docker build with an Nginx runtime, listening on port `8080` and serving the app at `/`.
 
+**Key features:**
+- Multi-stage build: `node:22-alpine` → `nginxinc/nginx-unprivileged:stable-alpine`
+- OpenShift non-root compliance
+- Kubernetes health check endpoints (`/healthz`, `/readyz`)
+- SPA routing with fallback to `index.html`
+- Windows Integrated Authentication header passthrough
+- Gzip compression
+
 #### Build-time environment variables
 
-Vite injects environment variables at build time, so provide them during the Docker build. See `.env.example` for the required Supabase values and add your API variables with the `VITE_` prefix.
+Vite injects environment variables at build time, so provide them during the Docker build. See `.env.example` for the required values.
 
 ```bash
-docker build \\
-  --build-arg VITE_SUPABASE_URL="https://your-project.supabase.co" \\
-  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="your-key" \\
-  --build-arg VITE_API_BASE_URL="https://api.example.com" \\
+docker build \
+  --build-arg VITE_SUPABASE_URL="https://your-project.supabase.co" \
+  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="your-key" \
+  --build-arg VITE_API_BASE_URL="https://api.example.com" \
   -t sparklight-raffle:latest .
 ```
 
@@ -84,7 +92,14 @@ docker build \\
 docker run --rm -p 8080:8080 sparklight-raffle:latest
 ```
 
-#### Deployment flow (Docker-based)
+#### Test health endpoints
+
+```bash
+curl http://localhost:8080/healthz  # Liveness probe
+curl http://localhost:8080/readyz   # Readiness probe
+```
+
+#### Deployment flow
 
 ```mermaid
 sequenceDiagram
@@ -98,28 +113,21 @@ sequenceDiagram
   Build-->>Dev: Image artifact
   Dev->>Registry: docker push
   Registry-->>OCP: Image pull
+  OCP->>OCP: Liveness probe /healthz
+  OCP->>OCP: Readiness probe /readyz
   OCP-->>Dev: App running on port 8080
 ```
 
-### Reusable deployment prompt
-
-Use the following prompt to prepare any Vite + React project for the same Docker-based deployment flow:
+#### File structure
 
 ```
-You are preparing a Vite + React + TypeScript app for Docker-based OpenShift deployment.
-
-Requirements:
-- Use a multi-stage Dockerfile with a Node build stage and an Nginx runtime stage.
-- Base image preference: Alpine, most recent stable Node.
-- Expose port 8080 and serve the app at "/".
-- Support SPA routing (fallback to index.html).
-- Provide a .dockerignore.
-- Document build-time env vars (all VITE_*, Supabase keys, and API endpoints) in .env.example.
-- Add README instructions for docker build/run and a Mermaid sequence diagram for build->push->deploy.
-- Do not include OpenShift YAML manifests.
-
-Please implement the Dockerfile, nginx config (if needed), .dockerignore, .env.example, and README updates.
+├── Dockerfile              # Multi-stage build
+├── docker/nginx.conf       # Nginx config with health endpoints
+├── .dockerignore           # Excludes node_modules, .git, etc.
+└── .env.example            # Document required env vars
 ```
+
+For a reusable deployment prompt, see `DEPLOYMENT_PROMPT.md`.
 
 ## Can I connect a custom domain to my Lovable project?
 
